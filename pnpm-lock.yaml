@@ -4,6 +4,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  js-function-reflector: github:leonardiwagner/js-function-reflector
+
 importers:
 
   .:
