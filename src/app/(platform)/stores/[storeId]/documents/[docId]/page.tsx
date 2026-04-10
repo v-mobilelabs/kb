@@ -25,7 +25,7 @@ export default async function DocumentViewerPage({
 
     const { orgId } = await getServerContext();
 
-    const docRepo = new StoreDocumentRepository(orgId, storeId);
+    const docRepo = new StoreDocumentRepository(orgId ?? '', storeId);
     const docResult = await docRepo.findById(docId);
     if (!docResult.ok) notFound();
 
@@ -33,8 +33,8 @@ export default async function DocumentViewerPage({
     if (doc.kind !== "data") notFound();
 
     if (edit === "1") {
-        return <CustomDocumentForm orgId={orgId} storeId={storeId} document={doc} />;
+        return <CustomDocumentForm storeId={storeId} document={doc} />;
     }
 
-    return <CustomDocumentViewer orgId={orgId} document={doc} />;
+    return <CustomDocumentViewer orgId={orgId ?? ''} document={doc} />;
 }

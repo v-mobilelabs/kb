@@ -43,7 +43,7 @@ export default async function StoreDocumentsPage({
     );
 
     // Fetch paginated documents using the use case via query
-    const docsResult = await listDocumentsQuery(orgId, storeId, {
+    const docsResult = await listDocumentsQuery(orgId ?? '', storeId, {
         q,
         sort,
         kind,
@@ -57,7 +57,7 @@ export default async function StoreDocumentsPage({
 
     return (
         <DocumentListClient
-            orgId={orgId}
+            orgId={orgId ?? ''}
             storeId={storeId}
             initialDocuments={initialDocuments}
             initialNextCursor={initialNextCursor}

@@ -226,8 +226,9 @@ export function RagQueryTester({ orgId }: RagQueryTesterProps) {
 
                 {/* Top K Selection */}
                 <div className="flex flex-col gap-2">
-                    <label className="text-sm font-medium">Top Results ({topK})</label>
+                    <label htmlFor="topk-range" className="text-sm font-medium">Top Results ({topK})</label>
                     <input
+                        id="topk-range"
                         type="range"
                         min={1}
                         max={50}
@@ -238,6 +239,7 @@ export function RagQueryTester({ orgId }: RagQueryTesterProps) {
                     />
                     <div className="flex gap-2">
                         <input
+                            id="topk-number"
                             type="number"
                             min={1}
                             max={50}
@@ -247,6 +249,7 @@ export function RagQueryTester({ orgId }: RagQueryTesterProps) {
                             }
                             disabled={isQuerying}
                             className="w-24 bg-foreground/5 border border-foreground/10 rounded-lg px-3 py-2 text-sm outline-none focus:border-accent transition-colors"
+                            aria-label="Top results number input"
                         />
                     </div>
                 </div>
@@ -257,10 +260,11 @@ export function RagQueryTester({ orgId }: RagQueryTesterProps) {
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         {/* Kind Filter */}
                         <div className="flex flex-col gap-2">
-                            <label className="text-xs font-medium text-foreground/70">
+                            <label htmlFor="filter-kind" className="text-xs font-medium text-foreground/70">
                                 Document Kind
                             </label>
                             <input
+                                id="filter-kind"
                                 type="text"
                                 placeholder="e.g., pdf, doc, sheet"
                                 value={filterKind}
@@ -272,10 +276,11 @@ export function RagQueryTester({ orgId }: RagQueryTesterProps) {
 
                         {/* Source ID Filter */}
                         <div className="flex flex-col gap-2">
-                            <label className="text-xs font-medium text-foreground/70">
+                            <label htmlFor="filter-source-id" className="text-xs font-medium text-foreground/70">
                                 Source ID
                             </label>
                             <input
+                                id="filter-source-id"
                                 type="text"
                                 placeholder="source.id"
                                 value={filterSourceId}
@@ -287,10 +292,11 @@ export function RagQueryTester({ orgId }: RagQueryTesterProps) {
 
                         {/* Source Collection Filter */}
                         <div className="flex flex-col gap-2">
-                            <label className="text-xs font-medium text-foreground/70">
+                            <label htmlFor="filter-source-collection" className="text-xs font-medium text-foreground/70">
                                 Source Collection
                             </label>
                             <input
+                                id="filter-source-collection"
                                 type="text"
                                 placeholder="source.collection"
                                 value={filterSourceCollection}

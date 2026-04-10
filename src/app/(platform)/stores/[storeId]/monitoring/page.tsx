@@ -14,7 +14,7 @@ export default async function StoreMonitoringPage({ params }: Readonly<{ params:
 
     const { uid, orgId, user } = await getServerContext();
 
-    const storeRepo = new StoreRepository(orgId);
+    const storeRepo = new StoreRepository(orgId ?? '');
     const storeResult = await storeRepo.findById(storeId);
     if (!storeResult.ok) notFound();
 
@@ -23,7 +23,7 @@ export default async function StoreMonitoringPage({ params }: Readonly<{ params:
     // Fetch initial monitoring data on server
     const ctx: AppContext = {
         uid,
-        orgId,
+        orgId: orgId ?? '',
         email: (user?.email as string) ?? "",
     };
     const useCase = new GetStoreMonitoringUseCase(ctx);
@@ -33,7 +33,7 @@ export default async function StoreMonitoringPage({ params }: Readonly<{ params:
     return (
         <StoreMonitoringClient
             storeId={store.id}
-            orgId={orgId}
+            orgId={orgId ?? ''}
             documentCount={store.documentCount}
             initialData={initialMonitoring}
         />

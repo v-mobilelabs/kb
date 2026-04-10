@@ -32,7 +32,7 @@ export async function getDashboardMetricsQuery(
   cacheTag(dashboardCacheTag(ctx.orgId));
 
   // Cache for 5 minutes; mutations can call revalidateTag to refresh
-  cacheLife("minutes", 5);
+  cacheLife("minutes");
 
   const uc = new GetDashboardMetricsUseCase(ctx);
   return uc.execute(options ?? {});

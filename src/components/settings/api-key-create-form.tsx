@@ -17,7 +17,7 @@ export function ApiKeyCreateForm({ orgId }: ApiKeyCreateFormProps) {
     const [createdKey, setCreatedKey] = useState<string | null>(null)
     const [copied, setCopied] = useState(false)
 
-    const mutation = useMutation({
+    const mutation = useMutation<any, Error, void>({
         mutationFn: () => createApiKeyAction({ name }),
         ...useOptimisticListAdd('api-keys', orgId),
         onSuccess: result => {

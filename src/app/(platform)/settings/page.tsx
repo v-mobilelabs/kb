@@ -10,16 +10,16 @@ import type { AppContext } from '@/lib/middleware/with-context'
 export const metadata = { title: 'Settings | CosmoOps' }
 
 export default async function SettingsPage() {
-    const { orgId, uid, user, email } = await getServerContext()
+    const { orgId, uid, user } = await getServerContext()
 
-    const orgSnap = await adminDb.collection('organizations').doc(orgId).get()
+    const orgSnap = await adminDb.collection('organizations').doc(orgId ?? '').get()
     const orgName: string = orgSnap.data()?.name ?? 'My Organization'
 
     // Fetch API keys on server
     const ctx: AppContext = {
         uid,
-        orgId,
-        email: email ?? (user?.email as string) ?? '',
+        orgId: orgId ?? '',
+        email: (user?.email as string) ?? '',
     }
     const apiKeysUc = new ListApiKeysUseCase(ctx)
     const apiKeysResult = await apiKeysUc.execute({})
@@ -39,7 +39,7 @@ export default async function SettingsPage() {
                     <h2 className="text-lg font-semibold">Organization</h2>
                     <p className="text-sm text-foreground/60">Update your organization details.</p>
                 </div>
-                <OrgDetailsForm orgId={orgId} initialName={orgName} />
+                <OrgDetailsForm orgId={orgId ?? ''} initialName={orgName} />
             </section>
 
             <Separator />
@@ -52,12 +52,12 @@ export default async function SettingsPage() {
                     </p>
                 </div>
 
-                <ApiKeyCreateForm orgId={orgId} />
+                <ApiKeyCreateForm orgId={orgId ?? ''} />
 
                 <Separator />
 
                 <h3 className="text-sm font-medium text-foreground/80">Active Keys</h3>
-                <ApiKeyList orgId={orgId} initialKeys={initialApiKeys.keys} />
+                <ApiKeyList orgId={orgId ?? ''} initialKeys={initialApiKeys.keys} />
             </section>
         </main>
     )

@@ -8,7 +8,7 @@ import { ReusableConfirmModal } from '@/components/shared/reusable-confirm-modal
 
 interface ApiKeyListProps {
     orgId: string
-    initialKeys?: Array<{ id: string; name: string; maskedKey: string; lastUsedAt?: string }>
+    initialKeys?: Array<{ id: string; name: string; maskedKey: string; createdAt: string; lastUsedAt: string | null }>
 }
 
 export function ApiKeyList({ orgId, initialKeys = [] }: ApiKeyListProps) {

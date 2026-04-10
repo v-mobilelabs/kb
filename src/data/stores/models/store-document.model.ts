@@ -17,7 +17,10 @@ export interface DocumentSource {
 export type DataDocumentType = "json" | "text" | "table";
 export type FileDocumentType = "image" | "pdf" | "doc" | "csv";
 export type NodeDocumentType = "chunk" | "entity" | "relation";
-export type DocumentType = DataDocumentType | FileDocumentType | NodeDocumentType;
+export type DocumentType =
+  | DataDocumentType
+  | FileDocumentType
+  | NodeDocumentType;
 
 // ── Shared base ───────────────────────────────────────────────────────────
 
@@ -43,7 +46,14 @@ interface DocumentBase {
 
 export type StoreDocument = DocumentBase &
   (
-    | { kind: "file"; type: FileDocumentType; path: string; mimeType: string; sizeBytes: number; extractedText: string | null }
+    | {
+        kind: "file";
+        type: FileDocumentType;
+        path: string;
+        mimeType: string;
+        sizeBytes: number;
+        extractedText: string | null;
+      }
     | { kind: "data"; type: DataDocumentType }
     | { kind: "node"; type: NodeDocumentType; parentId: string }
   );
@@ -51,3 +61,6 @@ export type StoreDocument = DocumentBase &
 // For backward compatibility and UI usage
 export type DocumentKind = StoreDocument["kind"];
 export type Resource = StoreDocument;
+
+// File document context for type inference
+export type FileContext = Extract<StoreDocument, { kind: "file" }>;

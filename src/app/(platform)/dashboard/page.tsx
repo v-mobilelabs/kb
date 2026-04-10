@@ -4,13 +4,13 @@ import { DashboardClient } from '@/components/dashboard/dashboard-client'
 import type { AppContext } from '@/lib/middleware/with-context'
 
 export default async function DashboardPage() {
-    const { orgId, user, uid, email } = await getServerContext()
+    const { orgId, user, uid } = await getServerContext()
 
     // Fetch dashboard metrics on server for SSR
     const ctx: AppContext = {
         uid,
-        orgId,
-        email: email ?? (user?.email as string) ?? '',
+        orgId: orgId ?? '',
+        email: (user?.email as string) ?? '',
     }
     const metricsResult = await getDashboardMetricsQuery(ctx)
     const initialMetrics = metricsResult.ok ? metricsResult.value : null
@@ -18,7 +18,7 @@ export default async function DashboardPage() {
     return (
         <DashboardClient
             displayName={(user?.displayName as string) ?? ''}
-            orgId={orgId}
+            orgId={orgId ?? ''}
             initialMetrics={initialMetrics}
         />
     )

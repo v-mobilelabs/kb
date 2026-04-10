@@ -75,7 +75,7 @@ export function KeyActivityChart({ data, isLoading = false }: KeyActivityChartPr
             <div className="px-3 pt-3 pb-0">
                 <p className="text-xs text-foreground/60 uppercase tracking-wide">Key activity (30d)</p>
             </div>
-            <div className="flex-1 w-full overflow-hidden">
+            <div className="flex-1 w-full overflow-hidden" style={{ minHeight: 0 }}>
                 <ResponsiveContainer width="100%" height="100%">
                     <BarChart
                         data={chartData}

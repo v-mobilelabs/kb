@@ -82,20 +82,20 @@ export function DocumentRow({ doc, orgId, onDeleteRequest }: Readonly<DocumentRo
                 <div className="flex gap-1">
                     {isData && (
                         <Link href={viewerHref}>
-                            <Button size="xs" variant="outline" className="text-primary-500 border-primary-500 hover:bg-primary-50">View</Button>
+                            <Button size="sm" variant="outline" className="text-primary-500 border-primary-500 hover:bg-primary-50">View</Button>
                         </Link>
                     )}
                     {isFile && (
                         <Link href={`/api/stores/${doc.storeId}/documents/${doc.id}/download`}>
-                            <Button size="xs" variant="outline" className="text-primary-500 border-primary-500 hover:bg-primary-50">Download</Button>
+                            <Button size="sm" variant="outline" className="text-primary-500 border-primary-500 hover:bg-primary-50">Download</Button>
                         </Link>
                     )}
                     {isFailed && (
-                        <Button size="xs" variant="outline" className="text-warning-500 border-warning-500 hover:bg-warning-50" onPress={handleRetry} isDisabled={retryMutation.isPending}>
+                        <Button size="sm" variant="outline" className="text-warning-500 border-warning-500 hover:bg-warning-50" onPress={handleRetry} isDisabled={retryMutation.isPending}>
                             {retryMutation.isPending ? "Retrying…" : "Retry"}
                         </Button>
                     )}
-                    <Button size="xs" variant="danger" onPress={onDeleteRequest}>
+                    <Button size="sm" variant="danger" onPress={onDeleteRequest}>
                         Delete
                     </Button>
                 </div>

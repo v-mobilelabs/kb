@@ -23,7 +23,7 @@ export default async function StoresPage({ searchParams }: Readonly<Props>) {
     const limit = Number.parseInt(params.limit || "10", 10);
 
     // Fetch initial data using cached query function
-    const result = await listStoresQuery(orgId, {
+    const result = await listStoresQuery(orgId ?? '', {
         q,
         sort,
         cursor,
@@ -35,7 +35,7 @@ export default async function StoresPage({ searchParams }: Readonly<Props>) {
 
     return (
         <StoreListClient
-            orgId={orgId}
+            orgId={orgId ?? ''}
             initialStores={initialStores}
             initialNextCursor={initialNextCursor}
         />

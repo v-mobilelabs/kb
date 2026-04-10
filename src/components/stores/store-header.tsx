@@ -56,10 +56,10 @@ export function StoreHeader({ store, orgId }: Readonly<StoreHeaderProps>) {
                     </div>
                 </div>
                 <div className="flex gap-2 shrink-0">
-                    <Button variant="outline" size="xs" onPress={() => setEditOpen(true)}>
+                    <Button variant="outline" size="sm" onPress={() => setEditOpen(true)}>
                         Edit
                     </Button>
-                    <Button variant="danger" size="xs" onPress={() => setDeleteOpen(true)}>
+                    <Button variant="danger" size="sm" onPress={() => setDeleteOpen(true)}>
                         Delete store
                     </Button>
                 </div>

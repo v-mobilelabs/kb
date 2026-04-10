@@ -33,7 +33,7 @@ export function OrgDetailsForm({ orgId, initialName }: OrgDetailsFormProps) {
         enabled: false, // Don't auto-fetch since we manage it via mutation
     })
 
-    const mutation = useMutation({
+    const mutation = useMutation<any, Error, void>({
         mutationFn: () => updateOrganizationAction({ name }),
         ...useOptimisticUpdate(['org-details'], orgId, { name }),
         onSuccess: result => {
