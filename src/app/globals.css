@@ -1,26 +1,30 @@
 @import "tailwindcss";
-
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@import "@heroui/styles";
+@import "./theme.css";
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  /* Map font variables set by Next.js font loader */
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Smooth transitions for color scheme changes */
+*,
+*::before,
+*::after {
+  transition-property: background-color, border-color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Remove transitions on animated elements to avoid conflicts */
+[data-motion],
+[aria-live] {
+  transition: none !important;
+}
+
+/* Hide the reCAPTCHA v3 badge — per Google's policy you must mention
+   reCAPTCHA protection in the UI instead (done in the login form). */
+.grecaptcha-badge {
+  visibility: hidden !important;
 }
