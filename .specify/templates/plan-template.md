@@ -29,14 +29,9 @@
 
 ## Constitution Check
 
-_GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
+*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-- [ ] **I. Coding & Naming Standards**: All files use `kebab-case` with functional suffixes; functions use `camelCase` verb-first; max nesting level 2; cyclomatic complexity ≤ 8; no `any`/`as`/`!`; all external data validated via Zod DTOs at the boundary.
-- [ ] **II. Tech Stack**: Feature uses Next.js 16+ App Router, React 19, and the designated AI/Orchestration stack (LangGraph, Vercel AI SDK, Gemini 3.1 via Vertex AI); strict multi-tenant Firebase isolation enforced.
-- [ ] **III. Architecture & Domain Design**: Domain folder under `/src/data/[domain]/` with `models/`, `repositories/`, `use-cases/`, `dto/`; Use Cases extend `BaseUseCase`; Repositories extend `AbstractFirebaseRepository`; data flow layer order respected (`UI → UseCase → Repository → DB`).
-- [ ] **IV. Functional & Design Rules**: Use Cases return `Result<T, E>`; all API routes/Server Actions wrapped in `WithContext` HOC; SSR + `loading.tsx` skeleton provided per route; design tokens in `lib/tokens.ts`; destructive actions use `ReusableConfirmModal` with `danger` intent.
-
-> Any violation MUST be justified in the Complexity Tracking table below.
+[Gates determined based on constitution file]
 
 ## Project Structure
 
@@ -53,7 +48,6 @@ specs/[###-feature]/
 ```
 
 ### Source Code (repository root)
-
 <!--
   ACTION REQUIRED: Replace the placeholder tree below with the concrete layout
   for this feature. Delete unused options and expand the chosen structure with
@@ -104,7 +98,7 @@ directories captured above]
 
 > **Fill ONLY if Constitution Check has violations that must be justified**
 
-| Violation                  | Why Needed         | Simpler Alternative Rejected Because |
-| -------------------------- | ------------------ | ------------------------------------ |
-| [e.g., 4th project]        | [current need]     | [why 3 projects insufficient]        |
-| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient]  |
+| Violation | Why Needed | Simpler Alternative Rejected Because |
+|-----------|------------|-------------------------------------|
+| [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
+| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |
