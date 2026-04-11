@@ -4,8 +4,10 @@
       "collectionGroup": "audits",
       "queryScope": "COLLECTION_GROUP",
       "fields": [
+        { "fieldPath": "actorEmail", "order": "ASCENDING" },
         { "fieldPath": "eventType", "order": "ASCENDING" },
-        { "fieldPath": "timestamp", "order": "ASCENDING" }
+        { "fieldPath": "timestamp", "order": "ASCENDING" },
+        { "fieldPath": "__name__", "order": "ASCENDING" }
       ]
     },
 
