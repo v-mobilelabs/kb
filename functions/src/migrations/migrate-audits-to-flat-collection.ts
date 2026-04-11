@@ -29,7 +29,9 @@ export async function migrateAuditsToFlatCollection() {
 
   try {
     // Step 1: Migrate from /organizations/{orgId}/audits/*
-    console.log("[Migrate Audits] Step 1: Migrating from /organizations/{orgId}/audits");
+    console.log(
+      "[Migrate Audits] Step 1: Migrating from /organizations/{orgId}/audits",
+    );
     const orgsSnap = await db.collection("organizations").get();
 
     for (const orgDoc of orgsSnap.docs) {
@@ -41,17 +43,20 @@ export async function migrateAuditsToFlatCollection() {
         try {
           const data = auditDoc.data();
           // Ensure orgId is set in the document
-          await db.collection("audits").doc(auditDoc.id).set(
-            {
-              ...data,
-              orgId: orgId,
-            },
-            { merge: true }
-          );
+          await db
+            .collection("audits")
+            .doc(auditDoc.id)
+            .set(
+              {
+                ...data,
+                orgId: orgId,
+              },
+              { merge: true },
+            );
           stats.migratedFromOrgNested++;
         } catch (error) {
           stats.errors.push(
-            `Failed to migrate from organizations/${orgId}/audits/${auditDoc.id}: ${error}`
+            `Failed to migrate from organizations/${orgId}/audits/${auditDoc.id}: ${error}`,
           );
         }
       }
@@ -66,17 +71,20 @@ export async function migrateAuditsToFlatCollection() {
         const data = auditDoc.data();
         // Preserve or set orgId (might default to _system if not present)
         const orgId = data.orgId || "_system";
-        await db.collection("audits").doc(auditDoc.id).set(
-          {
-            ...data,
-            orgId: orgId,
-          },
-          { merge: true }
-        );
+        await db
+          .collection("audits")
+          .doc(auditDoc.id)
+          .set(
+            {
+              ...data,
+              orgId: orgId,
+            },
+            { merge: true },
+          );
         stats.migratedFromAuditLog++;
       } catch (error) {
         stats.errors.push(
-          `Failed to migrate from auditLog/${auditDoc.id}: ${error}`
+          `Failed to migrate from auditLog/${auditDoc.id}: ${error}`,
         );
       }
     }
@@ -96,7 +104,7 @@ export async function migrateAuditsToFlatCollection() {
           stats.alreadyInAudits++;
         } catch (error) {
           stats.errors.push(
-            `Failed to update orgId in audits/${auditDoc.id}: ${error}`
+            `Failed to update orgId in audits/${auditDoc.id}: ${error}`,
           );
         }
       } else {

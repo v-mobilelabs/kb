@@ -103,7 +103,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-            {/* Code Example */}
+      {/* Code Example */}
       <section className="border-t border-[--border] bg-[--background]">
         <div className="max-w-5xl mx-auto px-6 py-20">
           <div className="flex flex-col gap-12">
@@ -121,7 +121,7 @@ export default function LandingPage() {
               <div className="flex flex-col gap-3 p-6 rounded-xl border border-[--border] bg-[--overlay]">
                 <h3 className="font-semibold text-sm text-[--accent]">POST /api/v1/query</h3>
                 <pre className="text-xs bg-[--surface] p-3 rounded border border-[--border] overflow-x-auto">
-{`const result = await fetch(
+                  {`const result = await fetch(
   'https://api.cosmoops.com/api/v1/query',
   {
     method: 'POST',
@@ -150,7 +150,7 @@ console.log(result);
                 <strong>Full Example</strong> (Node.js) — <a href="/docs" className="text-[--accent] hover:underline">View API Docs →</a>
               </p>
               <pre className="text-xs bg-[--surface] p-4 rounded border border-[--border] overflow-x-auto">
-{`// Initialize
+                {`// Initialize
 const API_KEY = 'your-api-key';
 const BASE = 'https://api.cosmoops.com';
 
@@ -279,7 +279,7 @@ console.log(results);`}
         </div>
       </section>
 
-            {/* Footer */}
+      {/* Footer */}
       <footer className="border-t border-[--border] py-6 text-center text-xs text-[--muted]">
         © 2025 CosmoOps. All rights reserved.
       </footer>

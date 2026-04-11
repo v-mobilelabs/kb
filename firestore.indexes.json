@@ -42,7 +42,7 @@
       "fields": [
         { "fieldPath": "actorEmail", "order": "ASCENDING" },
         { "fieldPath": "eventType", "order": "ASCENDING" },
-        { "fieldPath": "timestamp", "order": "DESCENDING" }
+        { "fieldPath": "timestamp", "order": "ASCENDING" }
       ]
     },
     {

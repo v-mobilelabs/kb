@@ -45,5 +45,5 @@ export const migrateAudits = onRequest(
         details: String(error),
       });
     }
-  }
+  },
 );
