@@ -85,9 +85,10 @@ function LoginForm() {
                                 <TextField.Root isInvalid={!!emailError} fullWidth>
                                     <Label className="text-sm font-medium text-[--foreground]">Email address</Label>
                                     <Input
+                                        variant='secondary'
                                         type="email"
                                         value={email}
-                                        onChange={e => { setEmail(e.target.value); setEmailError('') }}
+                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => { setEmail(e.target.value); setEmailError('') }}
                                         autoComplete="email"
                                         autoFocus
                                         placeholder="you@company.com"

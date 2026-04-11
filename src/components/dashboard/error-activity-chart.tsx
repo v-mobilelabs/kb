@@ -85,6 +85,12 @@ export function ErrorActivityChart({ data, isLoading = false }: ErrorActivityCha
                             dataKey="date"
                             tick={{ fontSize: 8 }}
                             height={20}
+                            tickFormatter={(date) => {
+                                const dateObj = new Date(date)
+                                const month = String(dateObj.getMonth() + 1).padStart(2, '0')
+                                const day = String(dateObj.getDate()).padStart(2, '0')
+                                return `${month}-${day}`
+                            }}
                         />
                         <YAxis
                             type="number"

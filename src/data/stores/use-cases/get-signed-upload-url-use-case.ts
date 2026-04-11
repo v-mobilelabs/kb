@@ -1,4 +1,3 @@
-import { z } from "zod";
 import { BaseUseCase } from "@/lib/abstractions/base-use-case";
 import { type AppError, type Result, appError, err, ok } from "@/lib/result";
 import { type AppContext } from "@/lib/middleware/with-context";
@@ -7,12 +6,10 @@ import {
   type GetSignedUploadUrlInput,
 } from "@/data/stores/dto/document-dto";
 import { StoreRepository } from "@/data/stores/repositories/store-repository";
-import { StoreDocumentRepository } from "@/data/stores/repositories/store-document-repository";
 import { inferFileContextType } from "@/lib/infer-document-kind";
 import { getBucket } from "@/lib/firebase/storage";
 import { adminDb } from "@/lib/firebase/admin";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
-import { v4 as uuidv4 } from "uuid";
 
 interface UploadUrlResult {
   docId: string;
@@ -25,7 +22,7 @@ export class GetSignedUploadUrlUseCase extends BaseUseCase<
   UploadUrlResult
 > {
   protected schema = GetSignedUploadUrlSchema;
-  private storeRepo: StoreRepository;
+  private readonly storeRepo: StoreRepository;
 
   constructor(private readonly ctx: AppContext) {
     super();
@@ -56,7 +53,6 @@ export class GetSignedUploadUrlUseCase extends BaseUseCase<
     const storagePath = `org/${this.ctx.orgId}/store/${input.storeId}/doc/${docId}/${input.filename}`;
 
     // Check for existing doc with same filename (upsert scenario)
-    const docRepo = new StoreDocumentRepository(this.ctx.orgId, input.storeId);
     const existingDocs = await adminDb
       .collection(
         `organizations/${this.ctx.orgId}/stores/${input.storeId}/documents`,
@@ -82,7 +78,7 @@ export class GetSignedUploadUrlUseCase extends BaseUseCase<
     const now = new Date();
 
     // Transaction: optionally delete old doc, write new doc, update store counts
-    await adminDb.runTransaction(async (tx) => {
+    await adminDb.runTransaction(async (tx: FirebaseFirestore.Transaction) => {
       // If upsert, delete old document and decrement counts
       if (oldDocId) {
         const oldDocRef = adminDb
