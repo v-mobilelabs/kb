@@ -2,13 +2,14 @@
 
 ## Storage Structure
 
-All audit logs are stored in organization-scoped collections:
+All audit logs are stored in a flat, centralized collection:
 
 ```
-organizations/{orgId}/audits/{auditId}
+/audits/{auditId}
 ```
 
-- Each organization (including system orgs) has its own audit log collection
+- Single global audit log collection for all organizations
+- Each document includes an `orgId` field for filtering by organization
 - Document structure: `AuditLogEntry`
 - System events use `orgId: "_system"` for non-org-specific events
 
@@ -25,7 +26,7 @@ organizations/{orgId}/audits/{auditId}
 ### Creating Organization Audits
 
 ```typescript
-const auditRepo = new AuditLogRepository("org123");
+const auditRepo = new AuditLogRepository();
 const result = await auditRepo.create({
   eventType: "STORE_CREATED",
   actorUid: "user123",
@@ -40,7 +41,7 @@ const result = await auditRepo.create({
 ### Creating System Audits
 
 ```typescript
-const auditRepo = new AuditLogRepository("_system");
+const auditRepo = new AuditLogRepository();
 const result = await auditRepo.create({
   eventType: "MAGIC_LINK_REQUEST",
   actorUid: null,

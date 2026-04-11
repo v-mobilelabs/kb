@@ -32,14 +32,14 @@ export class GetDashboardMetricsUseCase extends BaseUseCase<
     const { orgId } = this.ctx;
     const since = new Date(Date.now() - input.days * 24 * 60 * 60 * 1000);
     const apiKeyRepo = new ApiKeyRepository(orgId);
-    const auditRepo = new AuditLogRepository(orgId);
+    const auditRepo = new AuditLogRepository();
     const storeRepo = new StoreRepository(orgId);
 
     const [activeKeysResult, activityResult, errorsResult, storesCountResult] =
       await Promise.all([
         apiKeyRepo.countActive(),
-        auditRepo.findByEventType("API_KEY_USAGE_SUCCESS", since),
-        auditRepo.findByEventType("API_KEY_USAGE_FAILURE", since),
+        auditRepo.findByEventType("API_KEY_USAGE_SUCCESS", since, orgId),
+        auditRepo.findByEventType("API_KEY_USAGE_FAILURE", since, orgId),
         storeRepo.countByOrg(),
       ]);
 

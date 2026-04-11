@@ -65,11 +65,12 @@ export class CheckRateLimitUseCase extends BaseUseCase<
     const since = new Date(Date.now() - input.windowMs);
 
     // Query audit log to count events within the time window
-    const auditRepo = new AuditLogRepository(input.orgId);
+    const auditRepo = new AuditLogRepository();
     const countResult = await auditRepo.count([
       { field: "actorEmail", op: "==", value: input.actorEmail },
       { field: "eventType", op: "==", value: input.eventType },
       { field: "timestamp", op: ">=", value: since },
+      { field: "orgId", op: "==", value: input.orgId },
     ]);
 
     if (!countResult.ok) {

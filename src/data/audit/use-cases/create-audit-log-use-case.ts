@@ -33,7 +33,7 @@ export class CreateAuditLogUseCase extends BaseUseCase<
         },
       };
     }
-    const auditRepo = new AuditLogRepository(input.orgId);
+    const auditRepo = new AuditLogRepository();
     const result = await auditRepo.create(input);
     return result;
   }
