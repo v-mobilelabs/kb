@@ -12,6 +12,15 @@
       "collectionGroup": "audits",
       "queryScope": "COLLECTION",
       "fields": [
+        { "fieldPath": "eventType", "order": "ASCENDING" },
+        { "fieldPath": "orgId", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "audits",
+      "queryScope": "COLLECTION",
+      "fields": [
         { "fieldPath": "orgId", "order": "ASCENDING" },
         { "fieldPath": "eventType", "order": "ASCENDING" },
         { "fieldPath": "timestamp", "order": "DESCENDING" }
