@@ -23,7 +23,6 @@
     "react-dom": "19.2.4",
     "react-google-recaptcha-v3": "^1.11.0",
     "recharts": "^3.8.1",
-    "z": "^1.0.9",
     "zod": "^4.3.6"
   },
   "devDependencies": {
