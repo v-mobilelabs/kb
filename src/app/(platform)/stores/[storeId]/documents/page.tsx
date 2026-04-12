@@ -1,6 +1,6 @@
 import { getServerContext } from "@/lib/server-context";
 import { listDocumentsQuery } from "@/data/stores/queries/list-documents-query";
-import { DocumentListClient } from "@/components/stores/document-list-client";
+import { DocumentListClient } from "@/components/stores/documents/document-list-client";
 import type {
     DocumentSortKey,
     DocumentKindFilter,
@@ -43,7 +43,7 @@ export default async function StoreDocumentsPage({
     );
 
     // Fetch paginated documents using the use case via query
-    const docsResult = await listDocumentsQuery(orgId, storeId, {
+    const docsResult = await listDocumentsQuery(orgId ?? '', storeId, {
         q,
         sort,
         kind,
@@ -57,7 +57,7 @@ export default async function StoreDocumentsPage({
 
     return (
         <DocumentListClient
-            orgId={orgId}
+            orgId={orgId ?? ''}
             storeId={storeId}
             initialDocuments={initialDocuments}
             initialNextCursor={initialNextCursor}

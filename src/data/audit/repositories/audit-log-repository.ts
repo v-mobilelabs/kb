@@ -12,19 +12,16 @@ import type {
 } from "@/data/audit/models/audit-log-entry.model";
 
 export class AuditLogRepository extends AbstractFirebaseRepository<AuditLogEntry> {
-  private readonly orgId: string;
-
   /**
-   * @param orgId - Organization ID (required). Audits are stored in `organizations/{orgId}/audits`.
-   *   For auth events without an org context, use "_system" as orgId.
+   * Audits are stored in a flat `/audits` collection with `orgId` as a document field.
+   * This allows for centralized audit log management across all organizations.
    */
-  constructor(orgId: string) {
+  constructor() {
     super();
-    this.orgId = orgId;
   }
 
   protected get collectionPath() {
-    return `organizations/${this.orgId}/audits`;
+    return "audits";
   }
 
   protected fromFirestore(
@@ -46,8 +43,12 @@ export class AuditLogRepository extends AbstractFirebaseRepository<AuditLogEntry
     };
   }
 
-  /** Query audit logs by event type and time window. */
-  async findByEventType(eventType: AuditEventType, since: Date) {
+  /** Query audit logs by event type, organization, and time window. */
+  async findByEventType(
+    eventType: AuditEventType,
+    since: Date,
+    orgId?: string,
+  ) {
     const filters: FilterOption[] = [
       { field: "eventType", op: "==" as WhereFilterOp, value: eventType },
       {
@@ -56,6 +57,14 @@ export class AuditLogRepository extends AbstractFirebaseRepository<AuditLogEntry
         value: Timestamp.fromDate(since),
       },
     ];
+
+    if (orgId) {
+      filters.push({
+        field: "orgId",
+        op: "==" as WhereFilterOp,
+        value: orgId,
+      });
+    }
 
     return this.findAll({
       filters,

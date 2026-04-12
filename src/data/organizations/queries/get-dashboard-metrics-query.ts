@@ -14,6 +14,7 @@ import type { AppError, Result } from "@/lib/result";
 interface DashboardMetrics {
   totalActiveKeys: number;
   totalStores: number;
+  totalMemories: number;
   keyActivity: { date: string; count: number }[];
   errors: { date: string; count: number }[];
 }
@@ -32,7 +33,7 @@ export async function getDashboardMetricsQuery(
   cacheTag(dashboardCacheTag(ctx.orgId));
 
   // Cache for 5 minutes; mutations can call revalidateTag to refresh
-  cacheLife("minutes", 5);
+  cacheLife("minutes");
 
   const uc = new GetDashboardMetricsUseCase(ctx);
   return uc.execute(options ?? {});

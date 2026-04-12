@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Button } from "@heroui/react";
 import { useState } from "react";
 import type { Store } from "@/data/stores/models/store.model";
-import { StoreEditForm } from "./store-edit-form";
+import { StoreFormModal } from "./store-form-modal";
 import { ReusableConfirmModal } from "@/components/shared/reusable-confirm-modal";
 import { deleteStoreAction } from "@/actions/store-actions";
 import { useRouter } from "next/navigation";
@@ -56,17 +56,17 @@ export function StoreHeader({ store, orgId }: Readonly<StoreHeaderProps>) {
                     </div>
                 </div>
                 <div className="flex gap-2 shrink-0">
-                    <Button variant="outline" size="xs" onPress={() => setEditOpen(true)}>
+                    <Button variant="outline" size="sm" onPress={() => setEditOpen(true)}>
                         Edit
                     </Button>
-                    <Button variant="danger" size="xs" onPress={() => setDeleteOpen(true)}>
+                    <Button variant="danger" size="sm" onPress={() => setDeleteOpen(true)}>
                         Delete store
                     </Button>
                 </div>
             </div>
 
             {editOpen && (
-                <StoreEditForm
+                <StoreFormModal
                     store={store}
                     orgId={orgId}
                     onClose={() => setEditOpen(false)}

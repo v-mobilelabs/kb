@@ -1,76 +1,46 @@
 'use client'
 
 import { useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation } from '@tanstack/react-query'
 import { Button, Chip } from '@heroui/react'
-import { listApiKeysAction, revokeApiKeyAction } from '@/actions/organization-actions'
+import { revokeApiKeyAction } from '@/actions/organization-actions'
 import { ReusableConfirmModal } from '@/components/shared/reusable-confirm-modal'
+import { useRouter } from 'next/navigation'
+
+interface ApiKey {
+    id: string
+    name: string
+    maskedKey: string
+    createdAt: string
+    lastUsedAt: string | null
+}
 
 interface ApiKeyListProps {
     orgId: string
-    initialKeys?: Array<{ id: string; name: string; maskedKey: string; lastUsedAt?: string }>
+    initialKeys?: ApiKey[]
 }
 
-export function ApiKeyList({ orgId, initialKeys = [] }: ApiKeyListProps) {
-    const queryClient = useQueryClient()
+export function ApiKeyList({ orgId: _orgId, initialKeys = [] }: Readonly<ApiKeyListProps>) {
+    const router = useRouter()
     const [revokeTarget, setRevokeTarget] = useState<{ id: string; name: string } | null>(null)
-
-    const { data, isLoading } = useQuery({
-        queryKey: ['api-keys', orgId],
-        queryFn: async () => {
-            const result = await listApiKeysAction()
-            if (!result.ok) throw new Error(result.error.message)
-            return result.value
-        },
-        initialData: initialKeys.length > 0 ? { keys: initialKeys } : undefined,
-    })
 
     const revokeMutation = useMutation({
         mutationFn: (keyId: string) => revokeApiKeyAction({ keyId }),
-        onMutate: async keyId => {
-            await queryClient.cancelQueries({ queryKey: ['api-keys', orgId] })
-            const prev = queryClient.getQueryData<typeof data>(['api-keys', orgId])
-            queryClient.setQueryData<typeof data>(['api-keys', orgId], old => ({
-                keys: (old?.keys ?? []).filter(k => k.id !== keyId),
-            }))
-            return { prev }
-        },
-        onError: (_err, _keyId, ctx) => {
-            queryClient.setQueryData(['api-keys', orgId], ctx?.prev)
-        },
-        onSuccess: () => {
+        onSuccess: result => {
+            if (!result.ok) return
             setRevokeTarget(null)
-            queryClient.invalidateQueries({ queryKey: ['dashboard-metrics', orgId] })
-        },
-        onSettled: () => {
-            queryClient.invalidateQueries({ queryKey: ['api-keys', orgId] })
+            router.refresh()
         },
     })
 
-    if (isLoading) {
-        return (
-            <div className="flex flex-col gap-2 animate-pulse">
-                {[1, 2].map(i => (
-                    <div key={i} className="h-14 bg-foreground/10 rounded-lg" />
-                ))}
-            </div>
-        )
-    }
-
-    const keys = data?.keys ?? []
-
-    if (keys.length === 0) {
-        return (
-            <p className="text-sm text-foreground/50">
-                No active API keys. Create one above.
-            </p>
-        )
+    if (initialKeys.length === 0) {
+        return <p className="text-sm text-foreground/50">No active API keys. Create one above.</p>
     }
 
     return (
         <>
             <div className="flex flex-col gap-2">
-                {keys.map(k => (
+                {initialKeys.map(k => (
                     <div
                         key={k.id}
                         className="flex items-center justify-between bg-surface border border-foreground/10 rounded-lg px-4 py-3"

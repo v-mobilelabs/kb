@@ -17,7 +17,6 @@ interface DayBucket {
 
 interface ErrorActivityChartProps {
     readonly data: DayBucket[]
-    readonly isLoading?: boolean
 }
 
 function formatCount(value: number): string {
@@ -62,11 +61,7 @@ function ErrorActivityTooltip({ active, payload }: Readonly<ChartTooltipProps>) 
     )
 }
 
-export function ErrorActivityChart({ data, isLoading = false }: ErrorActivityChartProps) {
-    if (isLoading) {
-        return <div className="h-80 w-full bg-foreground/10 rounded-xl animate-pulse" />
-    }
-
+export function ErrorActivityChart({ data }: Readonly<ErrorActivityChartProps>) {
     // Format data with display dates
     const chartData = formatChartData(data)
 
@@ -75,7 +70,7 @@ export function ErrorActivityChart({ data, isLoading = false }: ErrorActivityCha
             <div className="px-3 pt-3 pb-0">
                 <p className="text-xs text-foreground/60 uppercase tracking-wide">Errors (30d)</p>
             </div>
-            <div className="flex-1 w-full overflow-hidden">
+            <div className="flex-1 w-full overflow-hidden" style={{ minHeight: 0 }}>
                 <ResponsiveContainer width="100%" height="100%">
                     <BarChart
                         data={chartData}
@@ -85,6 +80,12 @@ export function ErrorActivityChart({ data, isLoading = false }: ErrorActivityCha
                             dataKey="date"
                             tick={{ fontSize: 8 }}
                             height={20}
+                            tickFormatter={(date) => {
+                                const dateObj = new Date(date)
+                                const month = String(dateObj.getMonth() + 1).padStart(2, '0')
+                                const day = String(dateObj.getDate()).padStart(2, '0')
+                                return `${month}-${day}`
+                            }}
                         />
                         <YAxis
                             type="number"

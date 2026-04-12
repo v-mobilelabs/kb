@@ -7,8 +7,8 @@ import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Store } from "@/data/stores/models/store.model";
 import type { StoreDocument } from "@/data/stores/models/store-document.model";
-import { DocumentListClient } from "./document-list-client";
-import { StoreEditForm } from "./store-edit-form";
+import { DocumentListClient } from "./documents/document-list-client";
+import { StoreFormModal } from "./store-form-modal";
 import { ReusableConfirmModal } from "@/components/shared/reusable-confirm-modal";
 import { deleteStoreAction } from "@/actions/store-actions";
 import { StoreMonitoringClient } from "./monitoring/store-monitoring-client";
@@ -17,9 +17,10 @@ interface StoreDetailClientProps {
     readonly orgId: string;
     readonly store: Store;
     readonly initialDocuments: StoreDocument[];
+    readonly initialNextCursor: string | null;
 }
 
-export function StoreDetailClient({ orgId, store, initialDocuments }: Readonly<StoreDetailClientProps>) {
+export function StoreDetailClient({ orgId, store, initialDocuments, initialNextCursor }: Readonly<StoreDetailClientProps>) {
     const router = useRouter();
     const queryClient = useQueryClient();
     const [editOpen, setEditOpen] = useState(false);
@@ -74,6 +75,7 @@ export function StoreDetailClient({ orgId, store, initialDocuments }: Readonly<S
             <div className="flex border-b border-foreground/10">
                 <button
                     onClick={() => setActiveTab("documents")}
+                    aria-label="View documents"
                     className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === "documents"
                         ? "border-primary text-foreground"
                         : "border-transparent text-foreground/50 hover:text-foreground"
@@ -83,6 +85,7 @@ export function StoreDetailClient({ orgId, store, initialDocuments }: Readonly<S
                 </button>
                 <button
                     onClick={() => setActiveTab("monitoring")}
+                    aria-label="View monitoring"
                     className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === "monitoring"
                         ? "border-primary text-foreground"
                         : "border-transparent text-foreground/50 hover:text-foreground"
@@ -99,6 +102,7 @@ export function StoreDetailClient({ orgId, store, initialDocuments }: Readonly<S
                         orgId={orgId}
                         storeId={store.id}
                         initialDocuments={initialDocuments}
+                        initialNextCursor={initialNextCursor}
                     />
                 )}
                 {activeTab === "monitoring" && (
@@ -111,7 +115,7 @@ export function StoreDetailClient({ orgId, store, initialDocuments }: Readonly<S
             </div>
 
             {editOpen && (
-                <StoreEditForm
+                <StoreFormModal
                     store={store}
                     orgId={orgId}
                     onClose={() => setEditOpen(false)}

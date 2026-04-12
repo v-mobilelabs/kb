@@ -10,10 +10,13 @@ const SYSTEM_PROMPT = [
   "",
   "Response format:",
   "{",
-  '  "relevant": <true if the documents sufficiently answer the query, false otherwise>,',
-  '  "confidence": <float 0.0–1.0 representing how confident you are in the relevance judgment>,',
+  '  "relevant": <true if the documents sufficiently answer the query, false ' +
+    "otherwise>,",
+  '  "confidence": <float 0.0–1.0 representing how confident you are in the ' +
+    "relevance judgment>,",
   '  "reasoning": "<one concise sentence explaining the judgment>",',
-  '  "answer": "<synthesised answer drawn only from the provided documents, or an empty string if not relevant>"',
+  '  "answer": "<synthesised answer drawn only from the provided documents, ' +
+    'or an empty string if not relevant>"',
   "}",
 ].join("\n");
 

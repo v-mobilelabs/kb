@@ -10,9 +10,7 @@ import {
     ModalFooter,
     Button,
     Input,
-    TextField,
     Label,
-    FieldError,
     Spinner,
     Switch,
 } from "@heroui/react";
@@ -81,28 +79,32 @@ export function StoreEditForm({ store, orgId, onClose }: Readonly<StoreEditFormP
     return (
         <ModalBackdrop isOpen onOpenChange={(open) => !open && !mutation.isPending && onClose()} isDismissable={!mutation.isPending}>
             <ModalContainer>
-                <ModalDialog>
+                <ModalDialog aria-label="Edit store">
                     <form onSubmit={handleSubmit}>
                         <ModalHeader>Edit store</ModalHeader>
-                        <ModalBody className="flex flex-col gap-4 px-1">
-                            <TextField.Root isInvalid={!!nameError} variant="secondary">
+                        <ModalBody className="flex flex-col gap-4 px-1 max-h-[70vh] overflow-y-auto">
+                            <div className="flex flex-col gap-1.5">
                                 <Label>Name *</Label>
                                 <Input
+                                    variant="secondary"
                                     value={name}
                                     maxLength={100}
+                                    className="w-full"
                                     onChange={(e) => { setName(e.target.value); setNameError(""); }}
                                 />
-                                <FieldError>{nameError}</FieldError>
-                            </TextField.Root>
-                            <TextField.Root variant="secondary">
+                                {nameError && <span className="text-xs text-danger">{nameError}</span>}
+                            </div>
+                            <div className="flex flex-col gap-1.5">
                                 <Label>Description</Label>
                                 <Input
+                                    variant="secondary"
                                     placeholder="Optional description"
                                     value={description}
                                     maxLength={500}
+                                    className="w-full"
                                     onChange={(e) => setDescription(e.target.value)}
                                 />
-                            </TextField.Root>
+                            </div>
                             {/* RAG Evaluation */}
                             <div className="flex items-start justify-between gap-4 rounded-lg border border-foreground/10 p-4">
                                 <div className="flex flex-col gap-1">

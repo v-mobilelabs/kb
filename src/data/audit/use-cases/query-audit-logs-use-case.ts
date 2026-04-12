@@ -24,10 +24,11 @@ export class QueryAuditLogsUseCase extends BaseUseCase<
   protected async handle(
     input: QueryAuditLogsDTO,
   ): Promise<Result<{ logs: AuditLogEntry[] }, AppError>> {
-    const auditRepo = new AuditLogRepository(input.orgId);
+    const auditRepo = new AuditLogRepository();
     const result = await auditRepo.findByEventType(
       input.eventType,
       input.since,
+      input.orgId ?? "_system",
     );
     return result.ok ? ok({ logs: result.value }) : result;
   }

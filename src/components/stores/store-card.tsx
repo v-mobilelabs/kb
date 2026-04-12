@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@heroui/react";
 import type { Store } from "@/data/stores/models/store.model";
-import { StoreEditForm } from "./store-edit-form";
+import { StoreFormModal } from "./store-form-modal";
 import { ReusableConfirmModal } from "@/components/shared/reusable-confirm-modal";
 import { deleteStoreAction } from "@/actions/store-actions";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -65,7 +65,7 @@ export function StoreCard({ store, orgId }: StoreCardProps) {
             </div>
 
             {editOpen && (
-                <StoreEditForm
+                <StoreFormModal
                     store={store}
                     orgId={orgId}
                     onClose={() => setEditOpen(false)}

@@ -7,7 +7,8 @@ import { CreateCustomDocumentUseCase } from "@/data/stores/use-cases/create-cust
 import { UpdateCustomDocumentUseCase } from "@/data/stores/use-cases/update-custom-document-use-case";
 import { ListDocumentsUseCase } from "@/data/stores/use-cases/list-documents-use-case";
 import { RetryDocumentEnrichmentUseCase } from "@/data/stores/use-cases/retry-document-enrichment-use-case";
-import { docsCacheTag } from "@/lib/cache-tags";
+import { GetSignedUploadUrlUseCase } from "@/data/stores/use-cases/get-signed-upload-url-use-case";
+import { docsCacheTag, storeDetailCacheTag } from "@/lib/cache-tags";
 import type { Result, AppError } from "@/lib/result";
 import type {
   DocumentSortKey,
@@ -97,5 +98,27 @@ export async function retryEnrichmentAction(
   return withAuthenticatedContext(async (ctx) => {
     const uc = new RetryDocumentEnrichmentUseCase(ctx);
     return uc.execute({ storeId, docId });
+  });
+}
+
+export async function getSignedUploadUrlAction(
+  rawInput: unknown,
+): Promise<
+  Result<{ docId: string; storagePath: string; uploadUrl: string }, AppError>
+> {
+  return withAuthenticatedContext(async (ctx) => {
+    const uc = new GetSignedUploadUrlUseCase(ctx);
+    const result = await uc.execute(rawInput);
+
+    // Invalidate documents list cache on successful upload URL generation
+    if (result.ok) {
+      const storeId = (rawInput as any)?.storeId;
+      if (storeId) {
+        revalidateTag(docsCacheTag(ctx.orgId, storeId), "max");
+        revalidateTag(storeDetailCacheTag(ctx.orgId, storeId), "max");
+      }
+    }
+
+    return result;
   });
 }

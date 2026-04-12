@@ -143,7 +143,7 @@ export function ActivityTable({
     }, [events, searchInput]);
 
     const retryMutation = useMutation({
-        mutationFn: (eventId: string, docId: string) => {
+        mutationFn: ({ eventId, docId }: { eventId: string; docId: string }) => {
             setRetryingId(eventId);
             setRetryErrors((prev) => {
                 const newErrors = { ...prev };
@@ -155,11 +155,10 @@ export function ActivityTable({
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["store-monitoring"] });
         },
-        onError: (error: unknown, variables: [string, string]) => {
-            const eventId = variables[0];
+        onError: (error: unknown, variables: { eventId: string; docId: string }) => {
             setRetryErrors((prev) => ({
                 ...prev,
-                [eventId]: error instanceof Error ? error.message : "Unknown error",
+                [variables.eventId]: error instanceof Error ? error.message : "Unknown error",
             }));
         },
         onSettled: () => {
@@ -169,7 +168,7 @@ export function ActivityTable({
 
     function handleRetry(event: ActivityEvent) {
         if (event.status !== "failed") return;
-        retryMutation.mutate(event.id, event.documentId);
+        retryMutation.mutate({ eventId: event.id, docId: event.documentId });
     }
 
     if (isLoading && !data) {

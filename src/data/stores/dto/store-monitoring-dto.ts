@@ -33,3 +33,9 @@ export interface StoreMonitoringMetrics {
   /** Store last updated */
   lastUpdated: string;
 }
+
+export interface DocumentTypeBreakdown {
+  kind: string;
+  type: string;
+  count: number;
+}

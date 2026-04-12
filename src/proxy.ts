@@ -41,16 +41,9 @@ export function proxy(request: NextRequest) {
     pathname.startsWith("/settings") ||
     pathname.startsWith("/stores");
 
-  const isAuthRoute = AUTH_ROUTES.some((r) => pathname.startsWith(r));
-
   // Unauthenticated (or expired-cookie) users hitting platform routes → login
   if (isPlatformRoute && !hasValidSession) {
     return NextResponse.redirect(new URL("/login", request.url));
-  }
-
-  // Authenticated users hitting auth routes → dashboard
-  if (isAuthRoute && hasValidSession) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
   return NextResponse.next();

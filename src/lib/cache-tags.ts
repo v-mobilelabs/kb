@@ -44,3 +44,11 @@ export const monitoringCacheTag = (orgId: string, storeId: string): string =>
  */
 export const dashboardCacheTag = (orgId: string): string =>
   `dashboard-${orgId}`;
+
+export const memoriesCacheTag = (orgId: string): string => `memories-${orgId}`;
+
+export const memoryDetailCacheTag = (orgId: string, memoryId: string): string =>
+  `memory-${orgId}-${memoryId}`;
+
+export const memoryDocsCacheTag = (orgId: string, memoryId: string): string =>
+  `memory-docs-${orgId}-${memoryId}`;

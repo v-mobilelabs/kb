@@ -23,7 +23,17 @@ export class CreateAuditLogUseCase extends BaseUseCase<
   protected async handle(
     input: CreateAuditLogDTO,
   ): Promise<Result<{ id: string }, AppError>> {
-    const auditRepo = new AuditLogRepository(input.orgId);
+    // Validate orgId is provided
+    if (!input.orgId) {
+      return {
+        ok: false,
+        error: {
+          code: "VALIDATION_ERROR",
+          message: "Organization ID is required for audit logging",
+        },
+      };
+    }
+    const auditRepo = new AuditLogRepository();
     const result = await auditRepo.create(input);
     return result;
   }

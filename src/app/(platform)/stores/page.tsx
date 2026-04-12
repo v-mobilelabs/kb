@@ -1,43 +1,39 @@
+import { Suspense } from "react";
 import { getServerContext } from "@/lib/server-context";
-import { listStoresQuery } from "@/data/stores/queries/list-stores-query";
 import type { StoreSortKey } from "@/data/stores/dto/store-query-dto";
-import { StoreListClient } from "@/components/stores/store-list-client";
+import { StoreActionsProvider } from "@/components/stores/store-actions-provider";
+import { NewStoreButton } from "@/components/stores/new-store-button";
+import { StoreFilters } from "@/components/stores/store-filters";
+import { StoreListServer } from "@/components/stores/store-list-server";
+import { StoreListSkeleton } from "@/components/stores/store-list-skeleton";
 
 interface Props {
     searchParams: Promise<{
         q?: string;
         sort?: string;
         cursor?: string;
-        limit?: string;
     }>;
 }
 
 export default async function StoresPage({ searchParams }: Readonly<Props>) {
     const { orgId } = await getServerContext();
-
-    // Read search parameters
     const params = await searchParams;
-    const q = params.q || "";
-    const sort = (params.sort || "createdAt_desc") as StoreSortKey;
+    const q = params.q ?? "";
+    const sort = (params.sort ?? "createdAt_desc") as StoreSortKey;
     const cursor = params.cursor;
-    const limit = Number.parseInt(params.limit || "10", 10);
-
-    // Fetch initial data using cached query function
-    const result = await listStoresQuery(orgId, {
-        q,
-        sort,
-        cursor,
-        limit,
-    });
-
-    const initialStores = result.ok ? result.value.items : [];
-    const initialNextCursor = result.ok ? result.value.nextCursor : null;
 
     return (
-        <StoreListClient
-            orgId={orgId}
-            initialStores={initialStores}
-            initialNextCursor={initialNextCursor}
-        />
+        <StoreActionsProvider orgId={orgId ?? ""}>
+            <div className="flex flex-col gap-6">
+                <div className="flex items-center justify-between">
+                    <h1 className="text-2xl font-bold">Stores</h1>
+                    <NewStoreButton />
+                </div>
+                <StoreFilters q={q} sort={sort} />
+                <Suspense key={`${q}|${sort}|${cursor ?? ""}`} fallback={<StoreListSkeleton />}>
+                    <StoreListServer orgId={orgId ?? ""} q={q} sort={sort} cursor={cursor} />
+                </Suspense>
+            </div>
+        </StoreActionsProvider>
     );
 }

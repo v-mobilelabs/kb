@@ -15,7 +15,7 @@ export default async function QueryPage() {
                 </p>
             </div>
 
-            <RagQueryTester orgId={orgId} />
+            <RagQueryTester orgId={orgId ?? ''} />
         </main>
     );
 }

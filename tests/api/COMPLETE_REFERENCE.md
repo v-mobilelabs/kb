@@ -504,5 +504,57 @@ gcloud functions logs read enrichCustomDocument | grep -i "error\|failed"
 
 ---
 
+## 🧠 Memory Module Test Scenarios
+
+### Memory CRUD
+
+| Scenario              | Method | Endpoint                       | Expected                            |
+| --------------------- | ------ | ------------------------------ | ----------------------------------- |
+| List memories (empty) | GET    | `/api/memories`                | `200`, empty items array            |
+| Create memory         | POST   | `/api/memories`                | `201`, returns memory with defaults |
+| Get memory detail     | GET    | `/api/memories/{id}`           | `200`, full memory object           |
+| Update memory         | PUT    | `/api/memories/{id}`           | `200`, updated capacity/description |
+| Delete memory + docs  | DELETE | `/api/memories/{id}`           | `200`, cascade deletes documents    |
+| List with search      | GET    | `/api/memories?q=prefix`       | `200`, filtered results             |
+| List with sort        | GET    | `/api/memories?sort=title_asc` | `200`, sorted results               |
+| Cursor pagination     | GET    | `/api/memories?cursor=...`     | `200`, next page                    |
+
+### Document CRUD
+
+| Scenario               | Method | Endpoint                                              | Expected                     |
+| ---------------------- | ------ | ----------------------------------------------------- | ---------------------------- |
+| List documents (empty) | GET    | `/api/memories/{id}/documents`                        | `200`, empty items           |
+| Create document        | POST   | `/api/memories/{id}/documents`                        | `201`, increments count      |
+| Get document detail    | GET    | `/api/memories/{id}/documents/{docId}`                | `200`, full content          |
+| Update document        | PUT    | `/api/memories/{id}/documents/{docId}`                | `200`, updated fields        |
+| Delete document        | DELETE | `/api/memories/{id}/documents/{docId}`                | `200`, decrements count      |
+| Filter condensed       | GET    | `/api/memories/{id}/documents?includeCondensed=false` | `200`, excludes AI summaries |
+
+### Capacity Eviction
+
+| Scenario                            | Expected                                             |
+| ----------------------------------- | ---------------------------------------------------- |
+| Create doc at capacity              | Oldest doc evicted, new doc created, count unchanged |
+| Reduce capacity below count via PUT | Excess oldest docs evicted atomically                |
+
+### Condensation (async)
+
+| Scenario                        | Expected                                                                                             |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| Create doc past threshold (50%) | Condensation triggered asynchronously via Cloud Function                                             |
+| After condensation              | 1 summary doc created (`isCondensationSummary: true`), source docs deleted, count decremented by n-1 |
+| Summary doc view                | Shows "AI-Generated Summary" banner, purple badge in list                                            |
+
+### Performance Targets
+
+| Operation          | Target |
+| ------------------ | ------ |
+| Memory creation    | < 30s  |
+| Document creation  | < 2s   |
+| Sort/filter update | < 1s   |
+| Deletion           | < 10s  |
+
+---
+
 **Last Updated**: April 7, 2026  
-**Version**: 1.0
+**Version**: 1.1

@@ -10,6 +10,7 @@ import {
 import { AuditLogRepository } from "@/data/audit/repositories/audit-log-repository";
 import { ApiKeyRepository } from "@/data/organizations/repositories/api-key-repository";
 import { StoreRepository } from "@/data/stores/repositories/store-repository";
+import { MemoryRepository } from "@/data/memories/repositories/memory-repository";
 
 export type {
   DashboardMetrics,
@@ -32,16 +33,24 @@ export class GetDashboardMetricsUseCase extends BaseUseCase<
     const { orgId } = this.ctx;
     const since = new Date(Date.now() - input.days * 24 * 60 * 60 * 1000);
     const apiKeyRepo = new ApiKeyRepository(orgId);
-    const auditRepo = new AuditLogRepository(orgId);
+    const auditRepo = new AuditLogRepository();
     const storeRepo = new StoreRepository(orgId);
 
-    const [activeKeysResult, activityResult, errorsResult, storesCountResult] =
-      await Promise.all([
-        apiKeyRepo.countActive(),
-        auditRepo.findByEventType("API_KEY_USAGE_SUCCESS", since),
-        auditRepo.findByEventType("API_KEY_USAGE_FAILURE", since),
-        storeRepo.countByOrg(),
-      ]);
+    const memoryRepo = new MemoryRepository(orgId);
+
+    const [
+      activeKeysResult,
+      activityResult,
+      errorsResult,
+      storesCountResult,
+      memoriesCountResult,
+    ] = await Promise.all([
+      apiKeyRepo.countActive(),
+      auditRepo.findByEventType("API_KEY_USAGE_SUCCESS", since, orgId),
+      auditRepo.findByEventType("API_KEY_USAGE_FAILURE", since, orgId),
+      storeRepo.countByOrg(),
+      memoryRepo.countByOrg(),
+    ]);
 
     if (!activeKeysResult.ok) {
       return err(appError("INTERNAL_ERROR", "Failed to count active keys"));
@@ -55,10 +64,14 @@ export class GetDashboardMetricsUseCase extends BaseUseCase<
     if (!storesCountResult.ok) {
       return err(appError("INTERNAL_ERROR", "Failed to count stores"));
     }
+    if (!memoriesCountResult.ok) {
+      return err(appError("INTERNAL_ERROR", "Failed to count memories"));
+    }
 
     return ok({
       totalActiveKeys: activeKeysResult.value,
       totalStores: storesCountResult.value,
+      totalMemories: memoriesCountResult.value,
       keyActivity: bucketByDay(activityResult.value.map((e) => e.timestamp)),
       errors: bucketByDay(errorsResult.value.map((e) => e.timestamp)),
     });

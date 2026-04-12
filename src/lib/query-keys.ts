@@ -22,4 +22,21 @@ export const queryKeys = {
   monitoring: (storeId: string) => ["monitoring", storeId] as const,
   monitoringStats: (orgId: string, storeId: string) =>
     ["monitoring", orgId, storeId, "stats"] as const,
+
+  // ── Memories ──────────────────────────────────────────────────────────────
+  memories: () => ["memories"] as const,
+  memoriesList: (orgId: string, filters: Record<string, unknown>) =>
+    ["memories", orgId, "list", filters] as const,
+  memoryDetail: (memoryId: string) => ["memories", memoryId] as const,
+
+  // ── Memory Documents ──────────────────────────────────────────────────────
+  memoryDocuments: (memoryId: string) =>
+    ["memories", memoryId, "documents"] as const,
+  memoryDocumentsList: (
+    orgId: string,
+    memoryId: string,
+    filters: Record<string, unknown>,
+  ) => ["memories", orgId, memoryId, "documents", "list", filters] as const,
+  memoryDocumentDetail: (memoryId: string, documentId: string) =>
+    ["memories", memoryId, "documents", documentId] as const,
 };

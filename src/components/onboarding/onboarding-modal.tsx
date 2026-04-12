@@ -44,7 +44,7 @@ export function OnboardingModal() {
         return Object.keys(newErrors).length === 0
     }
 
-    const mutation = useMutation({
+    const mutation = useMutation<any, Error, void>({
         mutationFn: () =>
             completeOnboardingAction({ displayName, orgName, orgSize }),
         ...useOptimisticUpdate(['profile'], '', { displayName }),

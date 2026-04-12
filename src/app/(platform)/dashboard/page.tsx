@@ -1,25 +1,27 @@
-import { getServerContext } from '@/lib/server-context'
-import { getDashboardMetricsQuery } from '@/data/organizations/queries/get-dashboard-metrics-query'
-import { DashboardClient } from '@/components/dashboard/dashboard-client'
-import type { AppContext } from '@/lib/middleware/with-context'
+import { Suspense } from 'react'
+import { DashboardServer } from '@/components/dashboard/dashboard-server'
 
-export default async function DashboardPage() {
-    const { orgId, user, uid, email } = await getServerContext()
-
-    // Fetch dashboard metrics on server for SSR
-    const ctx: AppContext = {
-        uid,
-        orgId,
-        email: email ?? (user?.email as string) ?? '',
-    }
-    const metricsResult = await getDashboardMetricsQuery(ctx)
-    const initialMetrics = metricsResult.ok ? metricsResult.value : null
-
+function DashboardSkeleton() {
     return (
-        <DashboardClient
-            displayName={(user?.displayName as string) ?? ''}
-            orgId={orgId}
-            initialMetrics={initialMetrics}
-        />
+        <div className="flex flex-col gap-6 animate-pulse">
+            <div className="h-8 bg-foreground/10 rounded-md w-64" />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="h-24 bg-surface rounded-xl border border-foreground/10" />
+                <div className="h-24 bg-surface rounded-xl border border-foreground/10" />
+                <div className="h-24 bg-surface rounded-xl border border-foreground/10" />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="h-80 bg-foreground/10 rounded-xl" />
+                <div className="h-80 bg-foreground/10 rounded-xl" />
+            </div>
+        </div>
+    )
+}
+
+export default function DashboardPage() {
+    return (
+        <Suspense fallback={<DashboardSkeleton />}>
+            <DashboardServer />
+        </Suspense>
     )
 }

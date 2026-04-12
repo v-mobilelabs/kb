@@ -15,7 +15,7 @@ export default async function StoreLayout({
     const { orgId } = await getServerContext();
 
     // Fetch store data
-    const storeRepo = new StoreRepository(orgId);
+    const storeRepo = new StoreRepository(orgId ?? '');
     const storeResult = await storeRepo.findById(storeId);
     if (!storeResult.ok) notFound();
 
@@ -24,7 +24,7 @@ export default async function StoreLayout({
     return (
         <div className="flex flex-col gap-6">
             {/* Store header with breadcrumbs, name, and controls */}
-            <StoreHeader store={store} orgId={orgId} />
+            <StoreHeader store={store} orgId={orgId ?? ''} />
 
             {/* Tab navigation */}
             <StoreTabs storeId={storeId} />
