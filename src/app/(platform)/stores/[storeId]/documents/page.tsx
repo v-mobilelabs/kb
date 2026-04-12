@@ -1,6 +1,6 @@
 import { getServerContext } from "@/lib/server-context";
 import { listDocumentsQuery } from "@/data/stores/queries/list-documents-query";
-import { DocumentListClient } from "@/components/stores/document-list-client";
+import { DocumentListClient } from "@/components/stores/documents/document-list-client";
 import type {
     DocumentSortKey,
     DocumentKindFilter,

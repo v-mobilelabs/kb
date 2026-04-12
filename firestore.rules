@@ -28,5 +28,14 @@ service cloud.firestore {
         allow read, create, update, delete: if isOrgMember(orgId);
       }
     }
+
+    // ─── Memory Module ─────────────────────────────────────────────
+    match /organizations/{orgId}/memories/{memoryId} {
+      allow read, create, update, delete: if isOrgMember(orgId);
+
+      match /documents/{docId} {
+        allow read, create, update, delete: if isOrgMember(orgId);
+      }
+    }
   }
 }

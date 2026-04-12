@@ -7,8 +7,8 @@ import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Store } from "@/data/stores/models/store.model";
 import type { StoreDocument } from "@/data/stores/models/store-document.model";
-import { DocumentListClient } from "./document-list-client";
-import { StoreEditForm } from "./store-edit-form";
+import { DocumentListClient } from "./documents/document-list-client";
+import { StoreFormModal } from "./store-form-modal";
 import { ReusableConfirmModal } from "@/components/shared/reusable-confirm-modal";
 import { deleteStoreAction } from "@/actions/store-actions";
 import { StoreMonitoringClient } from "./monitoring/store-monitoring-client";
@@ -115,7 +115,7 @@ export function StoreDetailClient({ orgId, store, initialDocuments, initialNextC
             </div>
 
             {editOpen && (
-                <StoreEditForm
+                <StoreFormModal
                     store={store}
                     orgId={orgId}
                     onClose={() => setEditOpen(false)}

@@ -6,13 +6,9 @@ import {
   validateRequestParams,
   sendErrorResponse,
 } from "../lib/request-validator.js";
-import { adminDb } from "../../lib/admin-firestore.js";
-import {
-  logApiKeyUsageSuccess,
-  logApiKeyUsageFailure,
-} from "../../lib/audit-logger.js";
-import { Timestamp } from "firebase-admin/firestore";
+import { createStore, updateStore, deleteStore } from "../../data/store.js";
 import type { AuthenticatedRequest } from "../middleware/validate-api-key.js";
+import { logApiKeyUsageFailure } from "../../lib/audit-logger.js";
 
 // ── Schemas ──────────────────────────────────────────────────────────────────
 
@@ -47,28 +43,14 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
   if (!parsed) return;
 
   try {
-    const ref = adminDb.collection(`organizations/${orgId}/stores`).doc();
-    const now = Timestamp.now();
-    const store = {
+    const store = await createStore({
       orgId,
+      apiKeyId,
       name: parsed.name,
-      description: parsed.description || null,
+      description: parsed.description,
       source: parsed.source,
-      documentCount: 0,
-      customCount: 0,
-      createdBy: `api:${apiKeyId}`,
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    await adminDb.runTransaction(async (tx) => {
-      tx.set(ref, store);
     });
-    await logApiKeyUsageSuccess(orgId, apiKeyId, {
-      action: "create_store",
-      storeId: ref.id,
-    });
-    res.status(201).json({ store: { id: ref.id, ...store } });
+    res.status(201).json({ store });
   } catch (err) {
     const errMsg = err instanceof Error ? err.message : String(err);
     await logApiKeyUsageFailure(orgId, apiKeyId, {
@@ -89,50 +71,21 @@ router.put("/:storeId", async (req: Request, res: Response): Promise<void> => {
   const body = await validateRequestBody(UpdateStoreSchema, req, res);
   if (!body) return;
 
-  const { storeId } = params;
-  const storeRef = adminDb.doc(`organizations/${orgId}/stores/${storeId}`);
-
   try {
-    const result = await adminDb.runTransaction(async (tx) => {
-      const snap = await tx.get(storeRef);
-
-      if (!snap.exists) {
-        throw new Error("Store not found");
-      }
-
-      const data = snap.data() as Record<string, unknown>;
-      if (data.orgId !== orgId) {
-        throw new Error("Forbidden");
-      }
-
-      const updates: Record<string, unknown> = { updatedAt: Timestamp.now() };
-
-      if (body.name !== undefined) {
-        updates.name = body.name;
-      }
-
-      if (body.description !== undefined) {
-        updates.description = body.description || null;
-      }
-
-      if (body.source !== undefined) {
-        updates.source = body.source;
-      }
-
-      tx.update(storeRef, updates);
-      return { id: storeId, ...data, ...updates };
+    const store = await updateStore({
+      orgId,
+      storeId: params.storeId,
+      apiKeyId,
+      name: body.name,
+      description: body.description,
+      source: body.source,
     });
-
-    await logApiKeyUsageSuccess(orgId, apiKeyId, {
-      action: "update_store",
-      storeId,
-    });
-    res.json({ store: result });
+    res.json({ store });
   } catch (err) {
     const errMsg = err instanceof Error ? err.message : String(err);
     await logApiKeyUsageFailure(orgId, apiKeyId, {
       action: "update_store",
-      storeId,
+      storeId: params.storeId,
       error: errMsg,
     });
     sendErrorResponse(err, res, 500, "Failed to update store");
@@ -148,46 +101,14 @@ router.delete(
     const params = await validateRequestParams(StoreParamSchema, req, res);
     if (!params) return;
 
-    const { storeId } = params;
-    const storeRef = adminDb.doc(`organizations/${orgId}/stores/${storeId}`);
-
     try {
-      await adminDb.runTransaction(async (tx) => {
-        const snap = await tx.get(storeRef);
-
-        if (!snap.exists) {
-          // idempotent: return success if already deleted
-          return;
-        }
-
-        const data = snap.data() as Record<string, unknown>;
-        if (data.orgId !== orgId) {
-          throw new Error("Forbidden");
-        }
-
-        // Delete all subcollection documents
-        const docsSnap = await adminDb
-          .collection(`organizations/${orgId}/stores/${storeId}/documents`)
-          .get();
-
-        for (const doc of docsSnap.docs) {
-          tx.delete(doc.ref);
-        }
-
-        // Delete the store itself
-        tx.delete(storeRef);
-      });
-
-      await logApiKeyUsageSuccess(orgId, apiKeyId, {
-        action: "delete_store",
-        storeId,
-      });
+      await deleteStore(orgId, params.storeId, apiKeyId);
       res.json({ deleted: true });
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : String(err);
       await logApiKeyUsageFailure(orgId, apiKeyId, {
         action: "delete_store",
-        storeId,
+        storeId: params.storeId,
         error: errMsg,
       });
       sendErrorResponse(err, res, 500, "Failed to delete store");

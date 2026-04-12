@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
 import { getServerContext } from "@/lib/server-context";
 import { StoreDocumentRepository } from "@/data/stores/repositories/store-document-repository";
-import { CustomDocumentViewer } from "@/components/stores/custom-document-viewer";
-import { CustomDocumentForm } from "@/components/stores/custom-document-form";
+import { CustomDocumentViewer } from "@/components/stores/documents/custom-document-viewer";
+import { CustomDocumentForm } from "@/components/stores/documents/custom-document-form";
 
 interface Params {
     storeId: string;

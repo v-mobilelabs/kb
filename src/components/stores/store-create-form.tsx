@@ -66,7 +66,7 @@ export function StoreCreateForm({ orgId, onClose }: Readonly<StoreCreateFormProp
     return (
         <ModalBackdrop isOpen onOpenChange={(open) => !open && !mutation.isPending && onClose()} isDismissable={!mutation.isPending}>
             <ModalContainer>
-                <ModalDialog>
+                <ModalDialog aria-label="New store">
                     <form onSubmit={handleSubmit}>
                         <ModalHeader>New store</ModalHeader>
                         <ModalBody className="flex flex-col gap-4 px-1">

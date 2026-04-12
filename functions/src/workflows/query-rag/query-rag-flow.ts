@@ -32,11 +32,8 @@ export const queryRagFlow = ai.defineFlow(
         : undefined;
 
       // Judge is the sole authority: relevant → return all, not relevant → return none
-      const filteredSources = judgment
-        ? judgment.relevant
-          ? sources
-          : []
-        : sources;
+      const filteredSources =
+        judgment && judgment.relevant ? sources : judgment ? [] : sources;
 
       const queryResult: QueryOutput = {
         answer:

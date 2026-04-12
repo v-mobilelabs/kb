@@ -94,7 +94,7 @@ export function DocumentListClient({
     const queryClient = useQueryClient();
 
     // ── URL param helpers ─────────────────────────────────────────────────
-    // Uses history.replaceState so filter/sort/search changes don’t trigger RSC re-renders.
+    // Uses history.replaceState so filter/sort/search changes don't trigger RSC re-renders.
     const updateParams = useCallback(
         (updates: Record<string, string | null>) => {
             const params = new URLSearchParams(searchParams.toString());

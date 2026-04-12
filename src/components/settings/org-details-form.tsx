@@ -2,48 +2,28 @@
 
 import { useState } from 'react'
 import { Button, Input, TextField, Label, FieldError, Spinner } from '@heroui/react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation } from '@tanstack/react-query'
 import { updateOrganizationAction } from '@/actions/organization-actions'
-import { useOptimisticUpdate } from '@/lib/hooks/use-optimistic-mutation'
+import { useRouter } from 'next/navigation'
 
 interface OrgDetailsFormProps {
     orgId: string
     initialName: string
 }
 
-interface OrgData {
-    name: string
-}
-
-export function OrgDetailsForm({ orgId, initialName }: OrgDetailsFormProps) {
-    const queryClient = useQueryClient()
+export function OrgDetailsForm({ orgId: _orgId, initialName }: Readonly<OrgDetailsFormProps>) {
+    const router = useRouter()
     const [name, setName] = useState(initialName)
     const [nameError, setNameError] = useState('')
     const [saved, setSaved] = useState(false)
 
-    // Use query to manage org data with initialData from SSR
-    const { data: orgData } = useQuery<OrgData>({
-        queryKey: ['org-details', orgId],
-        queryFn: async () => {
-            // In a real app, you'd have an API endpoint for this
-            // For now, just return the current state
-            return { name }
-        },
-        initialData: { name: initialName },
-        enabled: false, // Don't auto-fetch since we manage it via mutation
-    })
-
     const mutation = useMutation<any, Error, void>({
         mutationFn: () => updateOrganizationAction({ name }),
-        ...useOptimisticUpdate(['org-details'], orgId, { name }),
         onSuccess: result => {
-            if (!result.ok) {
-                setNameError(result.error.message)
-                return
-            }
-            queryClient.invalidateQueries({ queryKey: ['dashboard-metrics', orgId] })
+            if (!result.ok) { setNameError(result.error.message); return }
             setSaved(true)
             setTimeout(() => setSaved(false), 2500)
+            router.refresh()
         },
     })
 
@@ -75,9 +55,7 @@ export function OrgDetailsForm({ orgId, initialName }: OrgDetailsFormProps) {
                 >
                     {mutation.isPending ? <Spinner size="sm" /> : 'Save changes'}
                 </Button>
-                {saved && (
-                    <span className="text-sm text-success">Saved!</span>
-                )}
+                {saved && <span className="text-sm text-success">Saved!</span>}
             </div>
         </form>
     )

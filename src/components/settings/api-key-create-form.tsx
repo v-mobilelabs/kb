@@ -2,16 +2,16 @@
 
 import { useState } from 'react'
 import { Button, Input, Card, TextField, Label, FieldError, Spinner } from '@heroui/react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation } from '@tanstack/react-query'
 import { createApiKeyAction } from '@/actions/organization-actions'
-import { useOptimisticListAdd } from '@/lib/hooks/use-optimistic-mutation'
+import { useRouter } from 'next/navigation'
 
 interface ApiKeyCreateFormProps {
     orgId: string
 }
 
-export function ApiKeyCreateForm({ orgId }: ApiKeyCreateFormProps) {
-    const queryClient = useQueryClient()
+export function ApiKeyCreateForm({ orgId: _orgId }: Readonly<ApiKeyCreateFormProps>) {
+    const router = useRouter()
     const [name, setName] = useState('')
     const [nameError, setNameError] = useState('')
     const [createdKey, setCreatedKey] = useState<string | null>(null)
@@ -19,24 +19,11 @@ export function ApiKeyCreateForm({ orgId }: ApiKeyCreateFormProps) {
 
     const mutation = useMutation<any, Error, void>({
         mutationFn: () => createApiKeyAction({ name }),
-        ...useOptimisticListAdd('api-keys', orgId),
         onSuccess: result => {
-            if (!result.ok) {
-                setNameError(result.error.message)
-                return
-            }
+            if (!result.ok) { setNameError(result.error.message); return }
             setCreatedKey(result.value.key)
             setName('')
-            // Update cache with full key data for display
-            queryClient.setQueryData<{ keys: { id: string; name: string; maskedKey: string; createdAt: string; lastUsedAt: string | null }[] }>(
-                ['api-keys', orgId],
-                old => ({
-                    keys: [
-                        { id: result.value.id, name: result.value.name, maskedKey: result.value.maskedKey, createdAt: result.value.createdAt, lastUsedAt: null },
-                        ...(old?.keys ?? []),
-                    ],
-                }),
-            )
+            router.refresh()
         },
     })
 
@@ -69,11 +56,7 @@ export function ApiKeyCreateForm({ orgId }: ApiKeyCreateFormProps) {
                     />
                     <FieldError>{nameError}</FieldError>
                 </TextField.Root>
-                <Button
-                    type="submit"
-                    variant="primary"
-                    isDisabled={mutation.isPending}
-                >
+                <Button type="submit" variant="primary" isDisabled={mutation.isPending}>
                     {mutation.isPending ? <Spinner size="sm" /> : 'Create key'}
                 </Button>
             </form>

@@ -17,7 +17,6 @@ interface DayBucket {
 
 interface ErrorActivityChartProps {
     readonly data: DayBucket[]
-    readonly isLoading?: boolean
 }
 
 function formatCount(value: number): string {
@@ -62,11 +61,7 @@ function ErrorActivityTooltip({ active, payload }: Readonly<ChartTooltipProps>) 
     )
 }
 
-export function ErrorActivityChart({ data, isLoading = false }: ErrorActivityChartProps) {
-    if (isLoading) {
-        return <div className="h-80 w-full bg-foreground/10 rounded-xl animate-pulse" />
-    }
-
+export function ErrorActivityChart({ data }: Readonly<ErrorActivityChartProps>) {
     // Format data with display dates
     const chartData = formatChartData(data)
 

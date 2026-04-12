@@ -98,32 +98,42 @@ export function CustomDocumentViewer({ orgId, document }: CustomDocumentViewerPr
 
             {/* Source */}
             {source && (
-                <div className="text-xs text-foreground/50">
-                    Source: {source.id} / {source.collection}
+                <div className="text-xs text-foreground/60">
+                    <p>Source ID: <span className="font-mono">{source.id}</span></p>
+                    <p>Collection: <span className="font-mono">{source.collection}</span></p>
                 </div>
             )}
 
             {/* Summary */}
             {summary && (
-                <div className="bg-surface border border-foreground/10 rounded-xl p-4 text-sm text-foreground/70">
-                    <span className="font-medium text-foreground/90">Summary: </span>{summary}
+                <div className="rounded-lg border border-foreground/10 bg-surface p-4">
+                    <p className="text-xs font-medium text-foreground/60 mb-2">AI Summary</p>
+                    <p className="text-sm text-foreground/80">{summary}</p>
                 </div>
             )}
 
-            {/* JSON viewer */}
-            <pre className="bg-surface border border-foreground/10 rounded-xl p-4 overflow-x-auto text-sm font-mono text-foreground/80 whitespace-pre-wrap break-words">
-                {formattedJson}
-            </pre>
+            {/* Data Content */}
+            {document.kind === "data" && (
+                <div className="rounded-lg border border-foreground/10 bg-surface p-4">
+                    <p className="text-xs font-medium text-foreground/60 mb-2">JSON Data</p>
+                    <pre className="text-xs bg-foreground/5 rounded p-3 overflow-auto max-h-96 whitespace-pre-wrap break-words">
+                        {formattedJson}
+                    </pre>
+                </div>
+            )}
 
-            <ReusableConfirmModal
-                isOpen={deleteOpen}
-                title="Delete record"
-                message={`Delete "${document.name}"? This action cannot be undone.`}
-                confirmLabel="Delete"
-                onConfirm={handleDelete}
-                onDismiss={() => setDeleteOpen(false)}
-                isPending={deleteMutation.isPending}
-            />
+            {/* Delete Modal */}
+            {deleteOpen && (
+                <ReusableConfirmModal
+                    isOpen={deleteOpen}
+                    title="Delete document"
+                    message={`Delete "${document.name}"? This action cannot be undone.`}
+                    confirmLabel="Delete"
+                    onConfirm={handleDelete}
+                    onDismiss={() => setDeleteOpen(false)}
+                    isPending={deleteMutation.isPending}
+                />
+            )}
         </div>
     );
 }

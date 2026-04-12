@@ -17,7 +17,6 @@ interface DayBucket {
 
 interface KeyActivityChartProps {
     readonly data: DayBucket[]
-    readonly isLoading?: boolean
 }
 
 function formatCount(value: number): string {
@@ -62,11 +61,7 @@ function KeyActivityTooltip({ active, payload }: Readonly<ChartTooltipProps>) {
     )
 }
 
-export function KeyActivityChart({ data, isLoading = false }: KeyActivityChartProps) {
-    if (isLoading) {
-        return <div className="h-80 w-full bg-foreground/10 rounded-xl animate-pulse" />
-    }
-
+export function KeyActivityChart({ data }: Readonly<KeyActivityChartProps>) {
     // Format data with display dates
     const chartData = formatChartData(data)
 
