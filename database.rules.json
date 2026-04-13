@@ -2,9 +2,46 @@
   "rules": {
     ".read": false,
     ".write": false,
-    "apiKeys": {
-      ".read": false,
-      ".write": false
+    
+    "contexts": {
+      "$contextId": {
+        ".read": "root.child('contextAccessControl').child(auth.uid).child($contextId).exists()",
+        ".write": "root.child('contextAccessControl').child(auth.uid).child($contextId).exists()",
+        "documents": {
+          ".indexOn": ["createdAt", "updatedAt", "name"],
+          "$docId": {
+            ".validate": "newData.hasChildren(['id', 'contextId', 'createdAt', 'updatedAt', 'createdBy'])",
+            "id": { ".validate": "newData.val() == $docId" },
+            "contextId": { ".validate": "newData.val() == $contextId" },
+            "name": {
+              ".validate": "!newData.exists() || newData.isString()"
+            },
+            "metadata": {
+              ".validate": "!newData.exists() || true"
+            },
+            "createdAt": {
+              ".validate": "newData.isNumber() && newData.val() > 0"
+            },
+            "updatedAt": {
+              ".validate": "newData.isNumber() && newData.val() > 0"
+            },
+            "createdBy": {
+              ".validate": "newData.isString() && newData.val().length > 0"
+            },
+            "$other": { ".validate": false }
+          }
+        }
+      }
+    },
+    
+    "contextAccessControl": {
+      "$userId": {
+        ".read": "auth.uid == $userId",
+        ".write": "auth != null",
+        "$contextId": {
+          ".validate": "newData.val() === true"
+        }
+      }
     }
   }
 }

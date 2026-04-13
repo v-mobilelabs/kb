@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Cloud Functions compiled output (linted separately in functions/):
     "functions/lib/**",
+    // Test files with different lint requirements:
+    "tests/**",
   ]),
 ]);
 

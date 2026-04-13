@@ -1,6 +1,24 @@
-import { Timestamp } from "firebase-admin/firestore";
+import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { adminDb } from "../lib/admin-firestore.js";
 import { logApiKeyUsageSuccess } from "../lib/audit-logger.js";
+
+interface StoreDocumentData {
+  id: string;
+  orgId: string;
+  storeId: string;
+  name: string;
+  kind: "data";
+  type: "json";
+  status: "pending" | "completed" | "error";
+  error: string | null;
+  summary: string | null;
+  keywords: string[];
+  source: { id: string; collection: string };
+  data: unknown;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 interface CreateStoreInput {
   orgId: string;
@@ -161,4 +179,146 @@ export async function deleteStore(
   });
 
   return true;
+}
+
+/**
+ * List documents in a store (up to 25 most-recent)
+ */
+export async function getStoreDocuments(
+  orgId: string,
+  storeId: string,
+): Promise<{ items: StoreDocumentData[]; hasNext: boolean; nextCursor: string | null }> {
+  const pageSize = 25;
+  const snap = await adminDb
+    .collection(`organizations/${orgId}/stores/${storeId}/documents`)
+    .orderBy("createdAt", "desc")
+    .limit(pageSize + 1)
+    .get();
+
+  const allItems = snap.docs.map((d) => {
+    const data = d.data() as Record<string, unknown>;
+    return { id: d.id, ...data } as StoreDocumentData;
+  });
+
+  const hasNext = allItems.length > pageSize;
+  const items = hasNext ? allItems.slice(0, pageSize) : allItems;
+  const nextCursor = hasNext ? (items.at(-1)?.createdAt ?? null) : null;
+
+  return { items, hasNext, nextCursor };
+}
+
+/**
+ * Create a custom "data" document in a store
+ */
+export async function createStoreDocument(
+  orgId: string,
+  storeId: string,
+  apiKeyId: string,
+  name: string,
+  source: { id: string; collection: string },
+  data: unknown,
+  keywords: string[] = [],
+): Promise<StoreDocumentData> {
+  const storeRef = adminDb.doc(`organizations/${orgId}/stores/${storeId}`);
+  const storeSnap = await storeRef.get();
+
+  if (!storeSnap.exists) {
+    throw new Error("Store not found");
+  }
+  if ((storeSnap.data() as Record<string, unknown>).orgId !== orgId) {
+    throw new Error("Forbidden");
+  }
+
+  const docRef = adminDb
+    .collection(`organizations/${orgId}/stores/${storeId}/documents`)
+    .doc();
+  const now = new Date().toISOString();
+
+  const docData: Omit<StoreDocumentData, "id"> = {
+    orgId,
+    storeId,
+    name: name.trim(),
+    kind: "data",
+    type: "json",
+    status: "pending",
+    error: null,
+    summary: null,
+    keywords,
+    source,
+    data,
+    createdBy: `api:${apiKeyId}`,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  await adminDb.runTransaction(async (tx) => {
+    tx.set(docRef, docData);
+    tx.update(storeRef, {
+      documentCount: FieldValue.increment(1),
+      dataCount: FieldValue.increment(1),
+      updatedAt: Timestamp.now(),
+    });
+  });
+
+  await logApiKeyUsageSuccess(orgId, apiKeyId, {
+    action: "create_store_document",
+    storeId,
+    documentId: docRef.id,
+  });
+
+  return { id: docRef.id, ...docData };
+}
+
+/**
+ * Update a custom "data" document in a store
+ */
+export async function updateStoreDocument(
+  orgId: string,
+  storeId: string,
+  docId: string,
+  apiKeyId: string,
+  updates: {
+    name?: string;
+    source?: { id: string; collection: string };
+    data?: unknown;
+    keywords?: string[];
+  },
+): Promise<StoreDocumentData> {
+  const docRef = adminDb.doc(
+    `organizations/${orgId}/stores/${storeId}/documents/${docId}`,
+  );
+  const snap = await docRef.get();
+
+  if (!snap.exists) {
+    throw new Error("Document not found");
+  }
+
+  const existing = snap.data() as Record<string, unknown>;
+  if (existing.orgId !== orgId) {
+    throw new Error("Forbidden");
+  }
+  if (existing.kind !== "data") {
+    throw new Error("Only data documents can be updated via this endpoint");
+  }
+
+  const now = new Date().toISOString();
+  const patch: Record<string, unknown> = { updatedAt: now };
+
+  if (updates.name !== undefined) patch.name = updates.name.trim();
+  if (updates.keywords !== undefined) patch.keywords = updates.keywords;
+  if (updates.source !== undefined) patch.source = updates.source;
+  if (updates.data !== undefined) {
+    patch.data = updates.data;
+    patch.status = "pending"; // trigger re-enrichment
+  }
+
+  await docRef.update(patch);
+
+  await logApiKeyUsageSuccess(orgId, apiKeyId, {
+    action: "update_store_document",
+    storeId,
+    documentId: docId,
+  });
+
+  return { id: docId, ...existing, ...patch } as StoreDocumentData;
 }

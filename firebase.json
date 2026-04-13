@@ -13,6 +13,20 @@
     "public": "public",
     "rewrites": [
       {
+        "source": "/playground",
+        "run": {
+          "serviceId": "api",
+          "region": "us-central1"
+        }
+      },
+      {
+        "source": "/playground/**",
+        "run": {
+          "serviceId": "api",
+          "region": "us-central1"
+        }
+      },
+      {
         "source": "/api/v1/**",
         "run": {
           "serviceId": "api",

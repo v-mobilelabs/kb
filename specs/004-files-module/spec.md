@@ -113,14 +113,26 @@ An authenticated user wants to easily discover and manage their organisation's f
 - Q: Should API endpoints use explicit versioning (`/api/v1/files`) or no version prefix (`/api/files`)? → A: **No version prefix** — simpler URLs, versioning via HTTP headers or timestamps. Updated FR-001 through FR-005, UI-006.
 - Q: Should signed upload URL generation be hybrid (return signed URL for client-direct upload) or server-proxied (accept file bytes, handle upload server-side)? → A: **Server-proxied** — POST `/api/file/upload` accepts file bytes in request body; server handles all Storage upload logic and returns metadata. Simpler for clients, easier to enforce file size limits. Updated FR-001 and FR-016.
 
+### Session 2026-04-13 (Clarification Autonomy)
+
+- Q: What is the expected upload transaction model (atomic vs async processing)? → A: **Atomic** — File upload succeeds only when both Firestore metadata write AND Cloud Storage upload complete successfully. If either fails, the entire request fails (500) with no orphaned state. No intermediate "uploading" or "processing" states are exposed to the client. This simplifies consistency guarantees and retry logic. FR-001 and FR-014 already reflect this expectation implicitly; now explicit.
+- Q: Should file access control be uniform across all org members or differentiated by role (admin/member)? → A: **Uniform access** — In v1, all authenticated members of an organisation have equal read/download/delete permissions for all org files. Role-based file access control (e.g., "admin only" or "folder-level ownership") is deferred to v2. Updated Assumptions section.
+- Q: How are orphaned Storage files handled if Firestore write fails after successful Storage upload? → A: **Acceptance with logging** — If Storage upload succeeds but Firestore metadata write fails, the file remains orphaned in Cloud Storage (acceptable at v1 scale). Operations team must monitor logs and clean up periodically via GCP console or batch script. This trade-off prioritises availability over perfect consistency; v2 may implement transactional cleanup via Cloud Functions. Added to Assumptions.
+- Q: Should audit logging (file upload, download, delete events) be enforced in v1? → A: **No audit logging in v1** — File access and mutations are logged only at the application level (console.error/info). Compliance-grade audit trail via the audit module is out of scope for v1. Deferred to v2 if regulatory requirements emerge. Added to Assumptions and out-of-scope notes.
+- Q: What are the per-organisation rate limits and file count quotas? → A: **No enforced limits in v1** — File count is unlimited (subject to Firestore/Storage quotas). Upload rate limiting is not enforced; multi-tenant safety relies on GCP's per-project quota management. Per-org quotas (e.g., "max 1000 files/org", "10 uploads/min") are deferred to v2 with explicit org admin configuration. Added to Assumptions.
+
 ## Assumptions
 
 - Users are authenticated and belong to an organisation (an `orgId` exists) before accessing the Files module.
 - Organisation membership and session context are verified via the existing `withContext` pattern (auth module).
-- One organisation can have unlimited files (subject to Firestore/Storage quotas). File count quotas may be enforced at the org level in future versions but are not part of v1.
+- **All org members have equal file access** — In v1, any authenticated member of an org can read, download, and delete any file in that org's file collection. Role-based file access (e.g., "admin only" or "read-only member") is not implemented; deferred to v2.
+- One organisation can have unlimited files (subject to Firestore/Storage quotas). File count quotas may be enforced at the org level in future versions but are not part of v1. Per-org upload rate limits are not enforced in v1.
 - Files are stored in a private Firebase Cloud Storage bucket scoped per organisation. Public URLs are never generated; all downloads are via server-generated short-lived signed URLs (15-minute expiry).
 - File type restrictions are not enforced in v1 — any MIME type is accepted up to the 50 MB limit.
 - Bulk file upload (multiple files at once) is out of scope for v1.
 - File versioning is not supported; new uploads with the same original name replace the old file (upsert, not history).
 - Mobile-first responsive layout; no native mobile app required.
 - File search (prefix matching on `originalName`) uses Firestore full-text search capabilities or prefix-query optimisations; exact full-text search is deferred to v2 if Firestore constraints prevent it.
+- **Upload transaction atomicity**: File upload is atomic — both Storage upload and Firestore metadata write must succeed, or the entire request fails (500). No intermediate "uploading" or "processing" states are exposed. If Storage succeeds but Firestore fails, the file is orphaned in Storage (acceptable at v1 scale; operations can clean up periodically).
+- **No audit logging in v1** — File access and mutations are logged only at the application level (console.log/error). Compliance-grade audit trail via the audit module is out of scope for v1 and deferred to v2 if regulatory requirements emerge.
+- **No WCAG/accessibility enforcement in v1** — UI components are built with HeroUI (which provides baseline a11y), but no formal WCAG level audit is required. Accessibility improvements (screen reader optimization, keyboard navigation) are deferred to v2.

@@ -12,6 +12,7 @@ import { FileRepository } from "@/data/files/repositories/file-repository";
 import { getBucket } from "@/data/files/lib/firebase-storage";
 import { inferFileKind } from "@/data/files/lib/infer-file-kind";
 import { fileCacheTag } from "@/lib/cache-tags";
+import { listFilesQuery } from "@/data/files/queries/list-files-query";
 import { z } from "zod";
 
 const statusMap: Record<string, number> = {
@@ -66,8 +67,7 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-      const repository = new FileRepository(ctx.orgId);
-      const result = await repository.listFiles({
+      const result = await listFilesQuery(ctx.orgId, {
         search: parsed.data.search,
         sort: parsed.data.sort,
         order: parsed.data.order,
@@ -76,11 +76,18 @@ export async function GET(request: NextRequest) {
         limit: parsed.data.limit,
       });
 
+      if (!result.ok) {
+        return NextResponse.json(
+          { error: result.error.code, message: result.error.message },
+          { status: statusMap[result.error.code] || 500 },
+        );
+      }
+
       return NextResponse.json(
         {
-          files: result.files,
-          nextCursor: result.nextCursor,
-          total: result.total,
+          files: result.value.files,
+          nextCursor: result.value.nextCursor,
+          total: result.value.total,
         },
         { status: 200 },
       );
@@ -96,6 +103,28 @@ export async function GET(request: NextRequest) {
 }
 
 const MAX_UPLOAD_BYTES = 52_428_800; // 50 MiB
+
+async function deleteCollidingFile(
+  repository: FileRepository,
+  existing: { id: string; fileName: string },
+  orgId: string,
+): Promise<void> {
+  const bucket = getBucket();
+  const oldPath = `organizations/${orgId}/files/${existing.fileName}`;
+  try {
+    await bucket.file(oldPath).delete();
+  } catch (e) {
+    console.warn(`[POST /api/files] Old storage cleanup failed: ${oldPath}`, e);
+  }
+  try {
+    await repository.deleteFile(existing.id);
+  } catch (e) {
+    console.warn(
+      `[POST /api/files] Old Firestore doc cleanup failed: ${existing.id}`,
+      e,
+    );
+  }
+}
 
 /**
  * POST /api/files — Upload a file via multipart/form-data
@@ -145,6 +174,10 @@ export async function POST(request: NextRequest) {
 
     const storagePath = `organizations/${ctx.orgId}/files/${fileName}`;
 
+    // Check for an existing file with the same originalName (overwrite on collision)
+    const repository = new FileRepository(ctx.orgId);
+    const existing = await repository.findByOriginalName(originalName);
+
     try {
       const buffer = Buffer.from(await fileEntry.arrayBuffer());
       const bucket = getBucket();
@@ -164,7 +197,6 @@ export async function POST(request: NextRequest) {
     }
 
     try {
-      const repository = new FileRepository(ctx.orgId);
       const file = await repository.createFile({
         orgId: ctx.orgId,
         originalName,
@@ -174,6 +206,11 @@ export async function POST(request: NextRequest) {
         kind,
         uploadedBy: ctx.uid,
       });
+
+      // Remove old file if collision (best-effort; new file already committed)
+      if (existing) {
+        await deleteCollidingFile(repository, existing, ctx.orgId);
+      }
 
       revalidateTag(fileCacheTag(ctx.orgId), "max");
 

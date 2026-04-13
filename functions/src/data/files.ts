@@ -48,14 +48,16 @@ export function inferFileKind(mimeType: string): FileKind {
     /^application\/(msword|vnd\.openxmlformats-officedocument\.wordprocessingml)/i.test(
       lowerMime,
     )
-  )
+  ) {
     return "doc";
+  }
   if (
     /^application\/(vnd\.ms-excel|vnd\.openxmlformats-officedocument\.spreadsheetml|vnd\.oasis\.opendocument\.spreadsheet)|text\/csv$/i.test(
       lowerMime,
     )
-  )
+  ) {
     return "sheet";
+  }
   if (/^video\//i.test(lowerMime)) return "video";
   if (/^audio\//i.test(lowerMime)) return "audio";
   if (/^text\/(plain|markdown)/i.test(lowerMime)) return "text";
@@ -78,15 +80,17 @@ export function getFileExtension(mimeType: string): string {
     /^application\/vnd\.openxmlformats-officedocument\.wordprocessingml\.document/.test(
       lowerMime,
     )
-  )
+  ) {
     return "docx";
+  }
   if (/^application\/msword/.test(lowerMime)) return "doc";
   if (
     /^application\/vnd\.openxmlformats-officedocument\.spreadsheetml\.sheet/.test(
       lowerMime,
     )
-  )
+  ) {
     return "xlsx";
+  }
   if (/^application\/vnd\.ms-excel/.test(lowerMime)) return "xls";
   if (/^text\/csv/.test(lowerMime)) return "csv";
   if (/^text\/plain/.test(lowerMime)) return "txt";
@@ -254,6 +258,7 @@ export async function listFiles(
   const sort = options.sort ?? "createdAt";
   const order = options.order ?? "desc";
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let query: any = adminDb.collection(`organizations/${orgId}/files`);
 
   // Apply search filter
@@ -270,6 +275,7 @@ export async function listFiles(
 
   const snap = await query.get();
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let files = snap.docs.map((doc: any) => {
     const data = doc.data() as Record<string, unknown>;
     return {

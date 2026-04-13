@@ -9,9 +9,9 @@ const CONDENSE_SYSTEM_PROMPT = [
   "Preserve ALL factual details, decisions, names, numbers, and key context — do not " +
     "omit information.",
   "Remove filler, repetition, and formatting noise.",
-  'Return ONLY a JSON object: { "title": ' +
-    '"<short descriptive title, max 80 chars>", "condensed": ' +
-    '"<condensed content>" }',
+  "Return ONLY a JSON object: { \"title\": " +
+    "\"<short descriptive title, max 80 chars>\", \"condensed\": " +
+    "\"<condensed content>\" }",
   "Do not include any text outside the JSON.",
 ].join("\n");
 
@@ -44,9 +44,9 @@ async function condenseContent(
   rawContent: string,
   providedTitle?: string,
 ): Promise<CondensedResult> {
-  const prompt = providedTitle
-    ? `Title hint: ${providedTitle}\n\nContent:\n${rawContent.slice(0, 30_000)}`
-    : `Content:\n${rawContent.slice(0, 30_000)}`;
+  const prompt = providedTitle ?
+    `Title hint: ${providedTitle}\n\nContent:\n${rawContent.slice(0, 30_000)}` :
+    `Content:\n${rawContent.slice(0, 30_000)}`;
 
   const result = await ai.generate({
     model: "vertexai/gemini-2.5-flash",
@@ -166,4 +166,83 @@ export async function addMemoryDocument(
   });
 
   return { id: docRef.id, ...document };
+}
+
+/**
+ * Create a new memory
+ */
+export async function createMemory(
+  orgId: string,
+  apiKeyId: string,
+  options: {
+    description?: string | null;
+    documentCapacity?: number;
+    condenseThresholdPercent?: number;
+  } = {},
+): Promise<MemoryData> {
+  const ref = adminDb.collection(`organizations/${orgId}/memories`).doc();
+  const now = Timestamp.now();
+  const memoryData = {
+    orgId,
+    description: options.description ?? null,
+    documentCapacity: options.documentCapacity ?? 100,
+    condenseThresholdPercent: options.condenseThresholdPercent ?? 50,
+    documentCount: 0,
+    sessionId: `api:${apiKeyId}`,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  await ref.set(memoryData);
+
+  await logApiKeyUsageSuccess(orgId, apiKeyId, {
+    action: "create_memory",
+    memoryId: ref.id,
+  });
+
+  return { id: ref.id, ...memoryData };
+}
+
+/**
+ * List documents in a memory (up to 25 most-recent)
+ */
+export async function getMemoryDocuments(
+  orgId: string,
+  memoryId: string,
+  apiKeyId: string,
+): Promise<{ items: MemoryDocumentData[]; hasNext: boolean; nextCursor: string | null }> {
+  const pageSize = 25;
+  const snap = await adminDb
+    .collection(`organizations/${orgId}/memories/${memoryId}/documents`)
+    .orderBy("createdAt", "desc")
+    .limit(pageSize + 1)
+    .get();
+
+  const allItems = snap.docs.map((d) => {
+    const data = d.data() as Record<string, unknown>;
+    const createdAt =
+      data.createdAt instanceof Timestamp ? data.createdAt : Timestamp.now();
+    const updatedAt =
+      data.updatedAt instanceof Timestamp ? data.updatedAt : Timestamp.now();
+    return {
+      id: d.id,
+      ...data,
+      createdAt,
+      updatedAt,
+    } as MemoryDocumentData;
+  });
+
+  const hasNext = allItems.length > pageSize;
+  const items = hasNext ? allItems.slice(0, pageSize) : allItems;
+  const lastItem = items.at(-1);
+  const nextCursor = hasNext && lastItem ?
+    String((lastItem.createdAt as Timestamp).toMillis()) :
+    null;
+
+  await logApiKeyUsageSuccess(orgId, apiKeyId, {
+    action: "get_memory_documents",
+    memoryId,
+  });
+
+  return { items, hasNext, nextCursor };
 }

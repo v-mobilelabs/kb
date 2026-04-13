@@ -1,14 +1,58 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
 import { z } from "zod";
+import Busboy from "busboy";
 import {
-  validateRequestBody,
   validateRequestParams,
   sendErrorResponse,
 } from "../lib/request-validator.js";
 import { createFile, getFile, deleteFile } from "../../data/files.js";
 import { getBucket } from "../../lib/admin-storage.js";
 import type { AuthenticatedRequest } from "../middleware/validate-api-key.js";
+
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
+
+/**
+ * Parse a multipart/form-data upload from req.rawBody.
+ * The functions-framework's bodyParser.raw() consumes the request stream before
+ * user middleware runs, storing raw bytes in req.rawBody. This function feeds
+ * that buffer directly into busboy so the upload still works correctly.
+ */
+async function parseUploadedFile(req: Request): Promise<{
+  buffer: Buffer;
+  originalname: string;
+  mimetype: string;
+} | null> {
+  return new Promise((resolve, reject) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const rawBody = (req as any).rawBody as Buffer | undefined;
+    if (!rawBody || rawBody.length === 0) {
+      resolve(null);
+      return;
+    }
+
+    const bb = Busboy({ headers: req.headers });
+    let result: { buffer: Buffer; originalname: string; mimetype: string } | null = null;
+
+    bb.on("file", (_fieldname, file, info) => {
+      const chunks: Buffer[] = [];
+      file.on("data", (chunk: Buffer) => chunks.push(chunk));
+      file.on("end", () => {
+        result = {
+          buffer: Buffer.concat(chunks),
+          originalname: info.filename || "unknown",
+          mimetype: info.mimeType || "application/octet-stream",
+        };
+      });
+    });
+
+    bb.on("finish", () => resolve(result));
+    bb.on("error", (err: Error) => reject(err));
+
+    bb.write(rawBody);
+    bb.end();
+  });
+}
 
 // ── Schemas ──────────────────────────────────────────────────────────────────
 
@@ -23,45 +67,34 @@ router.post("/upload", async (req: Request, res: Response): Promise<void> => {
   const { orgId, apiKeyId } = req as AuthenticatedRequest;
 
   try {
-    // Extract file from request
-    // Note: This endpoint expects raw binary data or form data with originalName
-    const fileBuffer = req.body as Buffer | undefined;
-    const originalName =
-      (req.headers["x-original-name"] as string) || "unknown";
+    const uploadedFile = await parseUploadedFile(req);
 
-    if (
-      !fileBuffer ||
-      !(fileBuffer instanceof Buffer) ||
-      fileBuffer.length === 0
-    ) {
+    if (!uploadedFile) {
       res.status(400).json({
         error: "MISSING_FILE",
-        message: "No file data provided in request body",
+        message: "No file found in multipart form. Ensure the field name is \"file\".",
       });
       return;
     }
 
-    const mimeType =
-      (req.headers["content-type"] as string) || "application/octet-stream";
-
-    const file = await createFile({
-      orgId,
-      apiKeyId,
-      originalName,
-      mimeType,
-      fileBuffer,
-    });
-
-    res.status(201).json({ file });
-  } catch (err) {
-    const errMsg = err instanceof Error ? err.message : String(err);
-    if (errMsg.includes("50 MB")) {
+    if (uploadedFile.buffer.byteLength > MAX_FILE_SIZE) {
       res.status(413).json({
         error: "FILE_TOO_LARGE",
         message: "File exceeds 50 MB limit",
       });
       return;
     }
+
+    const file = await createFile({
+      orgId,
+      apiKeyId,
+      originalName: uploadedFile.originalname,
+      mimeType: uploadedFile.mimetype,
+      fileBuffer: uploadedFile.buffer,
+    });
+
+    res.status(201).json({ file });
+  } catch (err) {
     sendErrorResponse(err, res, 500, "Failed to upload file");
   }
 });

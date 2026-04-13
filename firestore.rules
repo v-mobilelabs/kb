@@ -42,5 +42,36 @@ service cloud.firestore {
     match /organizations/{orgId}/files/{fileId} {
       allow read, create, update, delete: if isOrgMember(orgId);
     }
+
+    // ─── Context Module ────────────────────────────────────────────
+    match /organizations/{orgId}/contexts/{contextId} {
+      // READ: Org member can read any context in their org
+      allow read: if isOrgMember(orgId);
+
+      // CREATE: Org member can create context; validate name 1-100 chars, windowSize
+      allow create: if isOrgMember(orgId)
+        && request.resource.data.orgId == orgId
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 100
+        && (request.resource.data.windowSize == null
+            || (request.resource.data.windowSize is number
+                && request.resource.data.windowSize > 0))
+        && request.resource.data.documentCount == 0;
+
+      // UPDATE: Org member can update name/windowSize; preserve createdBy/createdAt
+      allow update: if isOrgMember(orgId)
+        && resource.data.orgId == orgId
+        && (request.resource.data.name is string
+            && request.resource.data.name.size() > 0
+            && request.resource.data.name.size() <= 100)
+        && (request.resource.data.windowSize == null
+            || (request.resource.data.windowSize is number
+                && request.resource.data.windowSize > 0));
+
+      // DELETE: Org member can delete context
+      allow delete: if isOrgMember(orgId)
+        && resource.data.orgId == orgId;
+    }
   }
 }

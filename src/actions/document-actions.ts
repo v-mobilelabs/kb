@@ -112,6 +112,7 @@ export async function getSignedUploadUrlAction(
 
     // Invalidate documents list cache on successful upload URL generation
     if (result.ok) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const storeId = (rawInput as any)?.storeId;
       if (storeId) {
         revalidateTag(docsCacheTag(ctx.orgId, storeId), "max");

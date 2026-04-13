@@ -27,9 +27,9 @@ export const queryRagFlow = ai.defineFlow(
 
       const sources: QueryOutput["sources"] = docs;
 
-      const judgment = input.enableRagEvaluation
-        ? await judgeRagResult(input.query, sources)
-        : undefined;
+      const judgment = input.enableRagEvaluation ?
+        await judgeRagResult(input.query, sources) :
+        undefined;
 
       // Judge is the sole authority: relevant → return all, not relevant → return none
       const filteredSources =

@@ -1,6 +1,6 @@
 # kb Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-04-07
+Auto-generated from all feature plans. Last updated: 2026-04-13
 
 ## Active Technologies
 - TypeScript 5.x (Next.js 16+ App Router + Cloud Functions v2 Node.js 22) + Firebase Admin SDK, LangGraph.js, `@google-cloud/vertexai`, TanStack Query v5, HeroUI v3+, Zod, OpenTelemetry SDK (002-store-module)
@@ -28,7 +28,6 @@ TypeScript 5.x: Follow standard conventions
 ## Recent Changes
 - 002-store-module: Added TypeScript 5.x · Next.js 16+ App Router · React 19 + TanStack Query v5, Firebase Admin SDK, `next/cache` (`'use cache'`, `cacheTag`, `cacheLife`, `revalidateTag`), Zod, HeroUI v3+
 - 002-store-module: Added TypeScript 5.x (Next.js 16+ App Router + Cloud Functions v2 Node.js 22) + Firebase Admin SDK, LangGraph.js, `@google-cloud/vertexai`, TanStack Query v5, HeroUI v3+, Zod, OpenTelemetry SDK
-- 002-store-module: Added [if applicable, e.g., PostgreSQL, CoreData, files or N/A]
 
 
 <!-- MANUAL ADDITIONS START -->

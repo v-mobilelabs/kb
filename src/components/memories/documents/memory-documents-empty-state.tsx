@@ -1,10 +1,6 @@
 "use client";
 
-interface MemoryDocumentsEmptyStateProps { }
-
-export function MemoryDocumentsEmptyState(
-    _props: Readonly<MemoryDocumentsEmptyStateProps>,
-) {
+export function MemoryDocumentsEmptyState() {
     return (
         <div className="text-center py-16 text-foreground/50">
             <p className="text-lg font-medium">No documents yet</p>

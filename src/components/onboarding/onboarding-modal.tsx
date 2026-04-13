@@ -44,6 +44,7 @@ export function OnboardingModal() {
         return Object.keys(newErrors).length === 0
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const mutation = useMutation<any, Error, void>({
         mutationFn: () =>
             completeOnboardingAction({ displayName, orgName, orgSize }),

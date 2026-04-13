@@ -68,3 +68,15 @@ export const fileCacheTag = (orgId: string): string => `files-${orgId}`;
  */
 export const fileDetailCacheTag = (orgId: string, fileId: string): string =>
   `file-${orgId}-${fileId}`;
+
+// ── Context Module ─────────────────────────────────────────────────────────────
+
+export const contextsCacheTag = (orgId: string): string => `contexts-${orgId}`;
+
+export const contextDetailCacheTag = (
+  orgId: string,
+  contextId: string,
+): string => `context-${orgId}-${contextId}`;
+
+export const contextDocsCacheTag = (orgId: string, contextId: string): string =>
+  `context-docs-${orgId}-${contextId}`;

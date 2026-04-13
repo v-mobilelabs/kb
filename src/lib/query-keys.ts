@@ -47,4 +47,18 @@ export const queryKeys = {
   fileDetail: (fileId: string) => ["files", fileId] as const,
   fileDownload: (fileId: string) => ["files", fileId, "download"] as const,
   fileThumbnail: (fileId: string) => ["files", fileId, "thumbnail"] as const,
+
+  // ── Contexts ──────────────────────────────────────────────────────────────
+  contexts: () => ["contexts"] as const,
+  contextsList: (orgId: string, filters: Record<string, unknown>) =>
+    ["contexts", orgId, "list", filters] as const,
+  contextDetail: (contextId: string) => ["contexts", contextId] as const,
+
+  // ── Context Documents ─────────────────────────────────────────────────────
+  contextDocuments: (contextId: string) =>
+    ["contexts", contextId, "documents"] as const,
+  contextDocumentsList: (contextId: string, filters: Record<string, unknown>) =>
+    ["contexts", contextId, "documents", "list", filters] as const,
+  contextDocumentDetail: (contextId: string, docId: string) =>
+    ["contexts", contextId, "documents", docId] as const,
 };

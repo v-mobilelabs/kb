@@ -3,7 +3,7 @@
 import { cacheTag, cacheLife } from "next/cache";
 import { fileCacheTag } from "@/lib/cache-tags";
 import { FileRepository } from "@/data/files/repositories/file-repository";
-import { ok, err, appError } from "@/lib/result";
+import { ok } from "@/lib/result";
 import type { Result, AppError } from "@/lib/result";
 import type { File } from "@/data/files/models/file.model";
 
@@ -31,7 +31,7 @@ export async function listFilesQuery(
   options: ListFilesOptions = {},
 ): Promise<Result<ListFilesResult, AppError>> {
   cacheTag(fileCacheTag(orgId));
-  cacheLife("minutes");
+  cacheLife({ revalidate: 600 }); // 10 minutes
 
   const repository = new FileRepository(orgId);
 

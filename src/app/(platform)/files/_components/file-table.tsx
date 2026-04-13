@@ -15,6 +15,7 @@ import {
 } from "@heroui/react";
 import type { File } from "@/data/files/models/file.model";
 import { FileThumbnail } from "./file-thumbnail";
+import { FileCard } from "./file-card";
 import { DeleteFileModal } from "./delete-file-modal";
 import { KindBadge } from "@/components/shared/kind-badge";
 import { formatFileSize } from "@/data/files/lib/format-file-size";
@@ -122,24 +123,36 @@ interface FileTableProps {
 
 export function FileTable({ files, onDeleted }: Readonly<FileTableProps>) {
     return (
-        <Table>
-            <TableScrollContainer>
-                <TableContent aria-label="Files" selectionMode="none">
-                    <TableHeader>
-                        <TableColumn className="w-14"> </TableColumn>
-                        <TableColumn>Name</TableColumn>
-                        <TableColumn className="hidden sm:table-cell">Size</TableColumn>
-                        <TableColumn>Type</TableColumn>
-                        <TableColumn className="hidden sm:table-cell">Uploaded</TableColumn>
-                        <TableColumn className="w-20">Actions</TableColumn>
-                    </TableHeader>
-                    <TableBody>
-                        {files.map((file) => (
-                            <FileRow key={file.id} file={file} onDeleted={onDeleted} />
-                        ))}
-                    </TableBody>
-                </TableContent>
-            </TableScrollContainer>
-        </Table>
+        <>
+            {/* Table view — desktop (md and up) */}
+            <div className="hidden md:block">
+                <Table>
+                    <TableScrollContainer>
+                        <TableContent aria-label="Files" selectionMode="none">
+                            <TableHeader>
+                                <TableColumn className="w-14"> </TableColumn>
+                                <TableColumn>Name</TableColumn>
+                                <TableColumn className="hidden lg:table-cell">Size</TableColumn>
+                                <TableColumn>Type</TableColumn>
+                                <TableColumn className="hidden lg:table-cell">Uploaded</TableColumn>
+                                <TableColumn className="w-20">Actions</TableColumn>
+                            </TableHeader>
+                            <TableBody>
+                                {files.map((file) => (
+                                    <FileRow key={file.id} file={file} onDeleted={onDeleted} />
+                                ))}
+                            </TableBody>
+                        </TableContent>
+                    </TableScrollContainer>
+                </Table>
+            </div>
+
+            {/* Card view — mobile (below md) */}
+            <div className="md:hidden grid gap-3 grid-cols-1">
+                {files.map((file) => (
+                    <FileCard key={file.id} file={file} onDeleted={onDeleted} />
+                ))}
+            </div>
+        </>
     );
 }

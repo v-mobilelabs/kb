@@ -8,6 +8,17 @@ import { AbstractFirebaseRepository } from "@/lib/abstractions/abstract-firebase
 import type { File, FileKind } from "@/data/files/models/file.model";
 import { decodeCursor, encodeCursor } from "@/lib/cursor";
 
+function cursorSortValue(
+  file: File,
+  sort: "name" | "createdAt" | "size",
+  hasSearch: boolean,
+): string | number {
+  if (hasSearch) return file.originalName.toLowerCase();
+  if (sort === "name") return file.originalName;
+  if (sort === "size") return file.size;
+  return file.createdAt.getTime();
+}
+
 export class FileRepository extends AbstractFirebaseRepository<File> {
   constructor(private readonly orgId: string) {
     super();
@@ -44,13 +55,27 @@ export class FileRepository extends AbstractFirebaseRepository<File> {
   ): Promise<File> {
     const ref = this.collection().doc();
     const now = Timestamp.now();
-    await ref.set({ ...fileData, createdAt: now, updatedAt: now });
+    await ref.set({
+      ...fileData,
+      searchName: fileData.originalName.toLowerCase(),
+      createdAt: now,
+      updatedAt: now,
+    });
     return {
       ...fileData,
       id: ref.id,
       createdAt: now.toDate(),
       updatedAt: now.toDate(),
     };
+  }
+
+  async findByOriginalName(originalName: string): Promise<File | null> {
+    const snap = await this.collection()
+      .where("originalName", "==", originalName)
+      .limit(1)
+      .get();
+    if (snap.empty) return null;
+    return this.fromFirestore(snap.docs[0]);
   }
 
   async getFile(fileId: string): Promise<File | null> {
@@ -76,15 +101,19 @@ export class FileRepository extends AbstractFirebaseRepository<File> {
     const firestoreField = sort === "name" ? "originalName" : sort;
 
     let query: Query<DocumentData> = this.collection();
+    const hasSearch = !!options.search;
 
-    if (options.search) {
-      const term = options.search.toLowerCase();
+    if (hasSearch) {
+      // Firestore: range filter field must be the first orderBy.
+      // searchName stores originalName.toLowerCase() for case-insensitive prefix search.
+      const term = options.search!.toLowerCase();
       query = query
-        .where("originalName", ">=", term)
-        .where("originalName", "<", term + "\uf8ff");
+        .where("searchName", ">=", term)
+        .where("searchName", "<", term + "\uf8ff")
+        .orderBy("searchName");
+    } else {
+      query = query.orderBy(firestoreField, order);
     }
-
-    query = query.orderBy(firestoreField, order);
 
     let pageQuery = query.limit(limit + 1);
     if (options.cursor) {
@@ -95,9 +124,7 @@ export class FileRepository extends AbstractFirebaseRepository<File> {
     }
 
     const snap = await pageQuery.get();
-    let files = snap.docs.map((doc) =>
-      this.fromFirestore(doc as QueryDocumentSnapshot<DocumentData>),
-    );
+    let files = snap.docs.map((doc) => this.fromFirestore(doc));
 
     // OR-filter on kind (in-memory; Firestore doesn't natively support multi-value OR)
     if (options.kinds && options.kinds.length > 0) {
@@ -107,14 +134,12 @@ export class FileRepository extends AbstractFirebaseRepository<File> {
     const hasMore = files.length > limit;
     if (hasMore) files.pop();
 
+    const last = files.at(-1);
     const nextCursor =
-      hasMore && files.length > 0
+      hasMore && last
         ? encodeCursor({
-            id: files[files.length - 1].id,
-            sortValue:
-              sort === "name"
-                ? files[files.length - 1].originalName
-                : files[files.length - 1].createdAt.getTime(),
+            id: last.id,
+            sortValue: cursorSortValue(last, sort, hasSearch),
           })
         : null;
 
@@ -129,16 +154,5 @@ export class FileRepository extends AbstractFirebaseRepository<File> {
     if (!existsRes.ok || !existsRes.value) return false;
     await this.delete(fileId);
     return true;
-  }
-
-  async updateFile(
-    fileId: string,
-    updates: Partial<Omit<File, "id" | "orgId" | "createdAt">>,
-  ): Promise<File | null> {
-    await this.docRef(fileId).update({
-      ...updates,
-      updatedAt: Timestamp.now(),
-    });
-    return this.getFile(fileId);
   }
 }

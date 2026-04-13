@@ -6,7 +6,7 @@
 
 ## 📋 Summary
 
-**Total tasks**: 55  
+**Total tasks**: 43  
 **Parallelisable tasks**: 31 (marked [P])  
 **User Stories**: 2 (US1 P1 — File Lifecycle Management, US2 P2 — File Discovery & Management)
 
@@ -14,8 +14,8 @@
 
 1. **Setup** (4 tasks) — Cache tags, query keys, tokens, Firestore indexes + security rules
 2. **Foundational** (6 tasks) — File model, Zod DTOs, repository, utility libs, SVG icon generator
-3. **Phase 3 — [US1] File Lifecycle** (22 tasks) — Upload, download, thumbnail, delete API routes; delete Server Action; query functions; core UI components
-4. **Phase 4 — [US2] File Discovery** (17 tasks) — List API route; search/sort/filter; continuous scroll pagination; URL-synced state
+3. **Phase 3 — [US1] File Lifecycle** (14 tasks) — Upload, download, thumbnail, delete API routes; delete Server Action; query functions; core UI components
+4. **Phase 4 — [US2] File Discovery** (13 tasks) — List API route; search/sort/filter; continuous scroll pagination; URL-synced state
 5. **Polish** (6 tasks) — Empty states, error states, responsive layout, E2E validation
 
 ---
@@ -66,7 +66,7 @@ _Blocking prerequisites for all user stories — data types, Zod schemas, reposi
 
 - [x] T005 Define TypeScript types for `File`, `FileKind`, `FilesListResponse`, `FileUploadResponse`, `FileDownloadResponse`, `FileThumbnailResponse` in `src/data/files/models/file.model.ts` — `File` entity fields: `id`, `orgId`, `originalName`, `fileName` (UUID.ext), `size` (bytes), `mimeType`, `kind` (FileKind), `uploadedBy` (uid), `createdAt`
 - [x] T006 [P] Implement `inferFileKind(mimeType: string): FileKind` — MIME → kind lookup table (exact match then prefix wildcard fallback to `other`) in `src/data/files/lib/infer-file-kind.ts`; implement `formatFileSize(bytes: number): string` (B / KB / MB / GB) in `src/data/files/lib/format-file-size.ts`
-- [x] T007 [P] Implement `FileRepository` class with `createFile()`, `getFile()`, `listFiles()` (cursor-based, prefix search on `originalName`, in-memory OR kind filter), `updateFile()`, `deleteFile()` in `src/data/files/repositories/file-repository.ts`; cursor uses base64-encoded `{ id, sortValue }` pairs per existing `src/lib/cursor.ts` pattern; `listFiles` returns `{ files: File[]; nextCursor: string | null }`
+- [x] T007 [P] Implement `FileRepository` class with `createFile()` (stores `searchName: originalName.toLowerCase()` for search), `getFile()`, `findByOriginalName()` (exact match for collision detection), `listFiles()` (cursor-based; search uses `searchName` field with `orderBy("searchName")` to satisfy Firestore range-filter constraint; sort param `"name"` maps to Firestore field `"originalName"` for non-search sort; in-memory OR kind filter), `deleteFile()` in `src/data/files/repositories/file-repository.ts`; cursor uses base64-encoded `{ id, sortValue }` pairs per existing `src/lib/cursor.ts` pattern; `listFiles` returns `{ files: File[]; nextCursor: string | null; total: number }`
 - [x] T008 [P] Add Zod validation schemas for all file API boundaries: `FileListQuerySchema` (`search?`, `sort?: 'name'|'createdAt'|'size'`, `order?: 'asc'|'desc'`, `kinds?` comma-separated, `cursor?`, `limit?` coerce int 1–100 default 25) in `src/data/files/dto/file-query-dto.ts`; `FileUploadSchema` (`originalName`, `mimeType`, `size`) in same file
 - [x] T009 [P] Add Firebase Storage utility re-exports and helpers (bucket reference, signed URL generation, file upload stream) in `src/data/files/lib/firebase-storage.ts`; use existing Firebase Admin SDK singleton from `src/lib/firebase/`
 - [x] T010 Implement `generateSvgIcon(kind: FileKind): string` — returns `data:image/svg+xml;base64,...` string for each non-image kind (pdf, doc, sheet, video, audio, text, other); define distinct SVG per kind in `src/app/api/files/_lib/generate-svg-icon.ts`
@@ -81,7 +81,7 @@ _Blocking prerequisites for all user stories — data types, Zod schemas, reposi
 
 ### Upload Endpoint
 
-- [x] T011 [US1] Implement `POST /api/files` route handler (multipart form) in `src/app/api/files/route.ts` — wrapped in `withAuthenticatedContext`; parse multipart with `busboy` or `formidable`; validate file size ≤ 50 MB (return 413 if exceeded, FR-015); infer `kind` via `inferFileKind()`; generate UUID for `fileName`; upload to Storage at `organizations/{orgId}/files/{uuid}.{ext}`; write File document to Firestore via `FileRepository.createFile()`; return full `File` document; revalidate `fileCacheTag(orgId)`
+- [x] T011 [US1] Implement `POST /api/files` route handler (multipart form) in `src/app/api/files/route.ts` — wrapped in `withAuthenticatedContext`; parse multipart with `busboy` or `formidable`; validate file size ≤ 50 MB (return 413 if exceeded, FR-015); infer `kind` via `inferFileKind()`; generate UUID for `fileName`; **before uploading, call `FileRepository.findByOriginalName(originalName)` to detect collision**; upload to Storage at `organizations/{orgId}/files/{uuid}.{ext}`; write File document to Firestore via `FileRepository.createFile()` (which stores `searchName: originalName.toLowerCase()` internally for case-insensitive search); **if collision: delete old Storage object + old Firestore doc (best-effort, log failures)**; return full `File` document; revalidate `fileCacheTag(orgId)` — implements spec clarification "overwrite on collision"
 
 ### Download Endpoint
 
@@ -156,6 +156,8 @@ _Blocking prerequisites for all user stories — data types, Zod schemas, reposi
 
 - [x] T034 [P] [US2] Implement `EmptyState` component in `src/app/(platform)/files/_components/empty-state.tsx` — renders when `files.length === 0` and no active search/filter: message "No files yet. Upload your first file via the API." with upload icon; renders alternate message when search/filter is active: "No files match your filters." (UI-010)
 - [ ] T035 [P] [US2] Add error boundary with retry button to file list page — wrap `FileListClient` in `ErrorBoundary` that renders "Failed to load files." with HeroUI `Button` variant="bordered" "Retry" calling `reset()` (UI-011)
+
+- [x] T044 [P] Add `searchName` Firestore field and index to enable case-insensitive prefix search (FR-010 "case-insensitive" requirement) — `searchName: originalName.toLowerCase()` written by `FileRepository.createFile()`; `listFiles()` searches `searchName` field with `orderBy("searchName")` as required first-orderBy for Firestore range filter; composite index `searchName ASC + __name__ ASC` added to `firestore.indexes.json`; `findByOriginalName()` method added for collision detection (U1/overwrite); **existing files missing `searchName` field need backfill** (search will not match them until re-uploaded or migrated)
 
 ### Navigation
 

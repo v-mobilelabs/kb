@@ -17,6 +17,7 @@ export function ApiKeyCreateForm({ orgId: _orgId }: Readonly<ApiKeyCreateFormPro
     const [createdKey, setCreatedKey] = useState<string | null>(null)
     const [copied, setCopied] = useState(false)
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const mutation = useMutation<any, Error, void>({
         mutationFn: () => createApiKeyAction({ name }),
         onSuccess: result => {

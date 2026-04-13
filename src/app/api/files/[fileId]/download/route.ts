@@ -47,10 +47,7 @@ export async function GET(
       );
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      console.error(
-        `[GET /api/files/${fileId}/download] Error:`,
-        message,
-      );
+      console.error(`[GET /api/files/${fileId}/download] Error:`, message);
       return NextResponse.json(
         { error: "INTERNAL_ERROR", message: "Failed to generate download URL" },
         { status: 500 },

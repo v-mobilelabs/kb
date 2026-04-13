@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { getServerContext } from "@/lib/server-context";
 import { listFilesQuery } from "@/data/files/queries/list-files-query";
 import { FileListClient } from "./_components/file-list-client";
+import { ErrorBoundary } from "./_components/error-boundary";
 import FilesLoading from "./loading";
 
 interface Props {
@@ -42,11 +43,13 @@ export default async function FilesPage({ searchParams }: Readonly<Props>) {
             </div>
 
             <Suspense fallback={<FilesLoading />}>
-                <FileListClient
-                    orgId={orgId ?? ""}
-                    initialFiles={initialFiles}
-                    initialNextCursor={initialNextCursor}
-                />
+                <ErrorBoundary>
+                    <FileListClient
+                        orgId={orgId ?? ""}
+                        initialFiles={initialFiles}
+                        initialNextCursor={initialNextCursor}
+                    />
+                </ErrorBoundary>
             </Suspense>
         </div>
     );

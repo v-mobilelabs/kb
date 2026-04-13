@@ -17,6 +17,7 @@ export function OrgDetailsForm({ orgId: _orgId, initialName }: Readonly<OrgDetai
     const [nameError, setNameError] = useState('')
     const [saved, setSaved] = useState(false)
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const mutation = useMutation<any, Error, void>({
         mutationFn: () => updateOrganizationAction({ name }),
         onSuccess: result => {

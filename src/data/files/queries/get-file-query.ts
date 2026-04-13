@@ -16,7 +16,7 @@ export async function getFileQuery(
   fileId: string,
 ): Promise<Result<File, AppError>> {
   cacheTag(fileDetailCacheTag(orgId, fileId));
-  cacheLife("minutes");
+  cacheLife({ revalidate: 600 }); // 10 minutes
 
   const repository = new FileRepository(orgId);
   const file = await repository.getFile(fileId);
