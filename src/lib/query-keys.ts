@@ -39,4 +39,12 @@ export const queryKeys = {
   ) => ["memories", orgId, memoryId, "documents", "list", filters] as const,
   memoryDocumentDetail: (memoryId: string, documentId: string) =>
     ["memories", memoryId, "documents", documentId] as const,
+
+  // ── Files ─────────────────────────────────────────────────────────────────
+  files: () => ["files"] as const,
+  filesList: (orgId: string, filters: Record<string, unknown>) =>
+    ["files", orgId, "list", filters] as const,
+  fileDetail: (fileId: string) => ["files", fileId] as const,
+  fileDownload: (fileId: string) => ["files", fileId, "download"] as const,
+  fileThumbnail: (fileId: string) => ["files", fileId, "thumbnail"] as const,
 };

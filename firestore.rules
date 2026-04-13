@@ -37,5 +37,10 @@ service cloud.firestore {
         allow read, create, update, delete: if isOrgMember(orgId);
       }
     }
+
+    // ─── Files Module ──────────────────────────────────────────────
+    match /organizations/{orgId}/files/{fileId} {
+      allow read, create, update, delete: if isOrgMember(orgId);
+    }
   }
 }

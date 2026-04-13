@@ -1,9 +1,15 @@
+/**
+ * GET /api/memories/[memoryId]/documents/[documentId] — Fetch single document
+ * PUT /api/memories/[memoryId]/documents/[documentId] — Update a document
+ * DELETE /api/memories/[memoryId]/documents/[documentId] — Delete a document
+ */
+
 import { NextResponse, type NextRequest } from "next/server";
 import { connection } from "next/server";
 import { withAuthenticatedContext } from "@/lib/middleware/with-context";
-import { MemoryDocumentRepository } from "@/data/memories/repositories/memory-document-repository";
-import { UpdateMemoryDocumentSchema } from "@/data/memories/schemas";
-import { Timestamp } from "firebase-admin/firestore";
+import { GetMemoryDocumentUseCase } from "@/data/memories/use-cases/get-memory-document-use-case";
+import { UpdateMemoryDocumentUseCase } from "@/data/memories/use-cases/update-memory-document-use-case";
+import { DeleteMemoryDocumentUseCase } from "@/data/memories/use-cases/delete-memory-document-use-case";
 
 const statusMap: Record<string, number> = {
   VALIDATION_ERROR: 400,
@@ -13,6 +19,9 @@ const statusMap: Record<string, number> = {
   INTERNAL_ERROR: 500,
 };
 
+/**
+ * GET handler for single document details
+ */
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ memoryId: string; documentId: string }> },
@@ -21,8 +30,8 @@ export async function GET(
   const { memoryId, documentId } = await params;
 
   return withAuthenticatedContext(async (ctx) => {
-    const repo = new MemoryDocumentRepository(ctx.orgId, memoryId);
-    const result = await repo.findById(documentId);
+    const uc = new GetMemoryDocumentUseCase(ctx.orgId);
+    const result = await uc.execute({ memoryId, documentId });
 
     if (!result.ok) {
       const status = statusMap[result.error.code] ?? 500;
@@ -42,6 +51,9 @@ export async function GET(
   });
 }
 
+/**
+ * PUT handler for updating a document
+ */
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ memoryId: string; documentId: string }> },
@@ -51,47 +63,19 @@ export async function PUT(
 
   return withAuthenticatedContext(async (ctx) => {
     const body = await request.json();
-    const parsed = UpdateMemoryDocumentSchema.safeParse({
-      ...body,
-      documentId,
-    });
-    if (!parsed.success) {
+
+    const uc = new UpdateMemoryDocumentUseCase(ctx);
+    const result = await uc.execute({ memoryId, documentId, ...body });
+
+    if (!result.ok) {
+      const status = statusMap[result.error.code] ?? 500;
       return NextResponse.json(
-        { error: "VALIDATION_ERROR", message: parsed.error.message },
-        { status: 400 },
-      );
-    }
-
-    const repo = new MemoryDocumentRepository(ctx.orgId, memoryId);
-
-    const updates: Record<string, unknown> = {
-      updatedAt: Timestamp.now(),
-    };
-    if (parsed.data.title !== undefined) updates.title = parsed.data.title;
-    if (parsed.data.content !== undefined)
-      updates.content = parsed.data.content;
-
-    const updateResult = await repo.update(documentId, updates);
-    if (!updateResult.ok) {
-      const status = statusMap[updateResult.error.code] ?? 500;
-      return NextResponse.json(
-        {
-          error: updateResult.error.code,
-          message: updateResult.error.message,
-        },
+        { error: result.error.code, message: result.error.message },
         { status },
       );
     }
 
-    const refreshed = await repo.findById(documentId);
-    if (!refreshed.ok) {
-      return NextResponse.json(
-        { error: refreshed.error.code, message: refreshed.error.message },
-        { status: 500 },
-      );
-    }
-
-    return NextResponse.json(refreshed.value);
+    return NextResponse.json(result.value.document);
   }).catch((e: unknown) => {
     const message = e instanceof Error ? e.message : "Unknown error";
     const status =
@@ -101,6 +85,9 @@ export async function PUT(
   });
 }
 
+/**
+ * DELETE handler for removing a document
+ */
 export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ memoryId: string; documentId: string }> },
@@ -109,8 +96,8 @@ export async function DELETE(
   const { memoryId, documentId } = await params;
 
   return withAuthenticatedContext(async (ctx) => {
-    const repo = new MemoryDocumentRepository(ctx.orgId, memoryId);
-    const result = await repo.deleteWithDecrement(documentId);
+    const uc = new DeleteMemoryDocumentUseCase(ctx);
+    const result = await uc.execute({ memoryId, documentId });
 
     if (!result.ok) {
       const status = statusMap[result.error.code] ?? 500;

@@ -1,12 +1,17 @@
+/**
+ * GET /api/memories/[memoryId] — Fetch a single memory by ID
+ * PUT /api/memories/[memoryId] — Update a memory
+ * DELETE /api/memories/[memoryId] — Delete a memory
+ */
+
 import { NextResponse, type NextRequest } from "next/server";
 import { connection } from "next/server";
 import { revalidateTag } from "next/cache";
 import { withAuthenticatedContext } from "@/lib/middleware/with-context";
-import { MemoryRepository } from "@/data/memories/repositories/memory-repository";
-import { MemoryDocumentRepository } from "@/data/memories/repositories/memory-document-repository";
-import { UpdateMemorySchema } from "@/data/memories/schemas";
 import { memoriesCacheTag, memoryDetailCacheTag } from "@/lib/cache-tags";
-import { Timestamp } from "firebase-admin/firestore";
+import { GetMemoryUseCase } from "@/data/memories/use-cases/get-memory-use-case";
+import { UpdateMemoryUseCase } from "@/data/memories/use-cases/update-memory-use-case";
+import { DeleteMemoryUseCase } from "@/data/memories/use-cases/delete-memory-use-case";
 
 const statusMap: Record<string, number> = {
   VALIDATION_ERROR: 400,
@@ -16,6 +21,9 @@ const statusMap: Record<string, number> = {
   INTERNAL_ERROR: 500,
 };
 
+/**
+ * GET handler for single memory details
+ */
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ memoryId: string }> },
@@ -24,8 +32,8 @@ export async function GET(
   const { memoryId } = await params;
 
   return withAuthenticatedContext(async (ctx) => {
-    const repo = new MemoryRepository(ctx.orgId);
-    const result = await repo.findById(memoryId);
+    const uc = new GetMemoryUseCase(ctx.orgId);
+    const result = await uc.execute({ memoryId });
 
     if (!result.ok) {
       const status = statusMap[result.error.code] ?? 500;
@@ -45,6 +53,9 @@ export async function GET(
   });
 }
 
+/**
+ * PUT handler for updating a memory
+ */
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ memoryId: string }> },
@@ -54,66 +65,21 @@ export async function PUT(
 
   return withAuthenticatedContext(async (ctx) => {
     const body = await request.json();
-    const parsed = UpdateMemorySchema.safeParse({ ...body, memoryId });
-    if (!parsed.success) {
-      return NextResponse.json(
-        { error: "VALIDATION_ERROR", message: parsed.error.message },
-        { status: 400 },
-      );
-    }
 
-    const repo = new MemoryRepository(ctx.orgId);
-    const existing = await repo.findById(memoryId);
-    if (!existing.ok) {
-      const status = statusMap[existing.error.code] ?? 500;
+    const uc = new UpdateMemoryUseCase(ctx);
+    const result = await uc.execute({ ...body, memoryId });
+
+    if (!result.ok) {
+      const status = statusMap[result.error.code] ?? 500;
       return NextResponse.json(
-        { error: existing.error.code, message: existing.error.message },
+        { error: result.error.code, message: result.error.message },
         { status },
-      );
-    }
-
-    const updates: Record<string, unknown> = {
-      updatedAt: Timestamp.now(),
-    };
-    if (parsed.data.description !== undefined)
-      updates.description = parsed.data.description;
-    if (parsed.data.documentCapacity !== undefined)
-      updates.documentCapacity = parsed.data.documentCapacity;
-    if (parsed.data.condenseThresholdPercent !== undefined)
-      updates.condenseThresholdPercent = parsed.data.condenseThresholdPercent;
-
-    const updateResult = await repo.update(memoryId, updates);
-    if (!updateResult.ok) {
-      const status = statusMap[updateResult.error.code] ?? 500;
-      return NextResponse.json(
-        { error: updateResult.error.code, message: updateResult.error.message },
-        { status },
-      );
-    }
-
-    // If capacity reduced below current count, evict oldest documents
-    if (
-      parsed.data.documentCapacity !== undefined &&
-      parsed.data.documentCapacity < existing.value.documentCount
-    ) {
-      const docRepo = new MemoryDocumentRepository(ctx.orgId, memoryId);
-      await docRepo.evictOldestDocumentsToCapacity(
-        existing.value.documentCount,
-        parsed.data.documentCapacity,
-      );
-    }
-
-    const refreshed = await repo.findById(memoryId);
-    if (!refreshed.ok) {
-      return NextResponse.json(
-        { error: refreshed.error.code, message: refreshed.error.message },
-        { status: 500 },
       );
     }
 
     revalidateTag(memoriesCacheTag(ctx.orgId), "max");
     revalidateTag(memoryDetailCacheTag(ctx.orgId, memoryId), "max");
-    return NextResponse.json(refreshed.value);
+    return NextResponse.json(result.value.memory);
   }).catch((e: unknown) => {
     const message = e instanceof Error ? e.message : "Unknown error";
     const status =
@@ -123,6 +89,9 @@ export async function PUT(
   });
 }
 
+/**
+ * DELETE handler for removing a memory
+ */
 export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ memoryId: string }> },
@@ -131,8 +100,8 @@ export async function DELETE(
   const { memoryId } = await params;
 
   return withAuthenticatedContext(async (ctx) => {
-    const repo = new MemoryRepository(ctx.orgId);
-    const result = await repo.deleteWithDocuments(memoryId);
+    const uc = new DeleteMemoryUseCase(ctx);
+    const result = await uc.execute({ memoryId });
 
     if (!result.ok) {
       const status = statusMap[result.error.code] ?? 500;
@@ -146,7 +115,7 @@ export async function DELETE(
     revalidateTag(memoryDetailCacheTag(ctx.orgId, memoryId), "max");
     return NextResponse.json({
       success: true,
-      deletedCount: result.value.deletedCount,
+      deletedCount: result.value.deletedDocumentCount,
     });
   }).catch((e: unknown) => {
     const message = e instanceof Error ? e.message : "Unknown error";

@@ -1,12 +1,14 @@
+/**
+ * GET /api/memories/[memoryId]/documents — Paginated document listing
+ * POST /api/memories/[memoryId]/documents — Create a new memory document
+ */
+
 import { NextResponse, type NextRequest } from "next/server";
 import { connection } from "next/server";
 import { withAuthenticatedContext } from "@/lib/middleware/with-context";
-import { MemoryRepository } from "@/data/memories/repositories/memory-repository";
-import { MemoryDocumentRepository } from "@/data/memories/repositories/memory-document-repository";
-import {
-  MemoryDocumentListQuerySchema,
-  CreateMemoryDocumentSchema,
-} from "@/data/memories/schemas";
+import { MemoryDocumentListQuerySchema } from "@/data/memories/schemas";
+import { ListMemoryDocumentsUseCase } from "@/data/memories/use-cases/list-memory-documents-use-case";
+import { CreateMemoryDocumentUseCase } from "@/data/memories/use-cases/create-memory-document-use-case";
 
 const statusMap: Record<string, number> = {
   VALIDATION_ERROR: 400,
@@ -16,6 +18,9 @@ const statusMap: Record<string, number> = {
   INTERNAL_ERROR: 500,
 };
 
+/**
+ * GET handler for listing memory documents
+ */
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ memoryId: string }> },
@@ -45,8 +50,8 @@ export async function GET(
       );
     }
 
-    const repo = new MemoryDocumentRepository(ctx.orgId, memoryId);
-    const result = await repo.findByMemoryPaginated(parsed.data);
+    const uc = new ListMemoryDocumentsUseCase(ctx.orgId);
+    const result = await uc.execute({ memoryId, ...parsed.data });
 
     if (!result.ok) {
       const status = statusMap[result.error.code] ?? 500;
@@ -69,6 +74,9 @@ export async function GET(
   });
 }
 
+/**
+ * POST handler for creating a new memory document
+ */
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ memoryId: string }> },
@@ -77,46 +85,10 @@ export async function POST(
   const { memoryId } = await params;
 
   return withAuthenticatedContext(async (ctx) => {
-    // Verify memory exists
-    const memoryRepo = new MemoryRepository(ctx.orgId);
-    const memoryResult = await memoryRepo.findById(memoryId);
-    if (!memoryResult.ok) {
-      const status = statusMap[memoryResult.error.code] ?? 500;
-      return NextResponse.json(
-        { error: memoryResult.error.code, message: memoryResult.error.message },
-        { status },
-      );
-    }
-
     const body = await request.json();
-    const parsed = CreateMemoryDocumentSchema.safeParse(body);
-    if (!parsed.success) {
-      return NextResponse.json(
-        { error: "VALIDATION_ERROR", message: parsed.error.message },
-        { status: 400 },
-      );
-    }
 
-    const memory = memoryResult.value;
-    const docRepo = new MemoryDocumentRepository(ctx.orgId, memoryId);
-
-    // FIFO eviction if at capacity
-    if (memory.documentCount >= memory.documentCapacity) {
-      await docRepo.evictOldestDocumentsToCapacity(
-        memory.documentCount,
-        memory.documentCapacity - 1, // make room for the new doc
-      );
-    }
-
-    const now = new Date();
-    const result = await docRepo.createWithIncrement({
-      title: parsed.data.title,
-      content: parsed.data.content ?? "",
-      isCondensationSummary: false,
-      sessionId: ctx.uid,
-      createdAt: now,
-      updatedAt: now,
-    });
+    const uc = new CreateMemoryDocumentUseCase(ctx);
+    const result = await uc.execute({ memoryId, ...body });
 
     if (!result.ok) {
       const status = statusMap[result.error.code] ?? 500;
@@ -129,7 +101,7 @@ export async function POST(
     // Condensation is triggered automatically by Cloud Functions Firestore trigger
     // (onMemoryDocumentCreated) when threshold is met — no action needed here.
 
-    return NextResponse.json(result.value, { status: 201 });
+    return NextResponse.json(result.value.document, { status: 201 });
   }).catch((e: unknown) => {
     const message = e instanceof Error ? e.message : "Unknown error";
     const status =

@@ -1,13 +1,16 @@
+/**
+ * POST /api/memories — Create a new memory
+ * GET /api/memories — Paginated memory listing with search, sort, cursor pagination
+ */
+
 import { NextResponse, type NextRequest } from "next/server";
 import { connection } from "next/server";
 import { revalidateTag } from "next/cache";
 import { withAuthenticatedContext } from "@/lib/middleware/with-context";
-import { MemoryRepository } from "@/data/memories/repositories/memory-repository";
 import { memoriesCacheTag } from "@/lib/cache-tags";
-import {
-  MemoryListQuerySchema,
-  CreateMemorySchema,
-} from "@/data/memories/schemas";
+import { MemoryListQuerySchema } from "@/data/memories/schemas";
+import { ListMemoriesUseCase } from "@/data/memories/use-cases/list-memories-use-case";
+import { CreateMemoryUseCase } from "@/data/memories/use-cases/create-memory-use-case";
 
 const statusMap: Record<string, number> = {
   VALIDATION_ERROR: 400,
@@ -17,6 +20,10 @@ const statusMap: Record<string, number> = {
   INTERNAL_ERROR: 500,
 };
 
+/**
+ * GET handler with cursor-based pagination
+ * Query params: q (search), sort, cursor, limit
+ */
 export async function GET(request: NextRequest) {
   await connection();
 
@@ -42,8 +49,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const repo = new MemoryRepository(ctx.orgId);
-    const result = await repo.findByOrgPaginated(parsed.data);
+    const uc = new ListMemoriesUseCase(ctx.orgId);
+    const result = await uc.execute(parsed.data);
 
     if (!result.ok) {
       const status = statusMap[result.error.code] ?? 500;
@@ -66,33 +73,17 @@ export async function GET(request: NextRequest) {
   });
 }
 
+/**
+ * POST handler for creating a new memory
+ */
 export async function POST(request: NextRequest) {
   await connection();
 
   return withAuthenticatedContext(async (ctx) => {
     const body = await request.json();
-    const parsed = CreateMemorySchema.safeParse(body);
-    if (!parsed.success) {
-      return NextResponse.json(
-        {
-          error: "VALIDATION_ERROR",
-          message: parsed.error.message,
-        },
-        { status: 400 },
-      );
-    }
 
-    const now = new Date();
-    const repo = new MemoryRepository(ctx.orgId);
-    const result = await repo.create({
-      description: parsed.data.description?.trim() ?? null,
-      documentCapacity: parsed.data.documentCapacity,
-      condenseThresholdPercent: parsed.data.condenseThresholdPercent,
-      documentCount: 0,
-      sessionId: ctx.uid,
-      createdAt: now,
-      updatedAt: now,
-    });
+    const uc = new CreateMemoryUseCase(ctx);
+    const result = await uc.execute(body);
 
     if (!result.ok) {
       const status = statusMap[result.error.code] ?? 500;
@@ -103,7 +94,7 @@ export async function POST(request: NextRequest) {
     }
 
     revalidateTag(memoriesCacheTag(ctx.orgId), "max");
-    return NextResponse.json(result.value, { status: 201 });
+    return NextResponse.json(result.value.memory, { status: 201 });
   }).catch((e: unknown) => {
     const message = e instanceof Error ? e.message : "Unknown error";
     const status =

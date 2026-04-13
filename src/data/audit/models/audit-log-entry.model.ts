@@ -8,7 +8,13 @@ export type AuditEventType =
   | "API_KEY_USAGE_FAILURE"
   | "STORE_CREATED"
   | "STORE_UPDATED"
-  | "STORE_DELETED";
+  | "STORE_DELETED"
+  | "MEMORY_CREATED"
+  | "MEMORY_UPDATED"
+  | "MEMORY_DELETED"
+  | "MEMORY_DOCUMENT_CREATED"
+  | "MEMORY_DOCUMENT_UPDATED"
+  | "MEMORY_DOCUMENT_DELETED";
 
 export interface AuditLogEntry {
   id: string;

@@ -33,3 +33,20 @@ export const radii = {
   xl: "1rem", // 16px
   full: "9999px",
 } as const;
+
+/**
+ * Colour classes for file kind badges — WCAG AA compliant (4.5:1 ratio)
+ * Maps FileKind to Tailwind colour utility classes
+ */
+export const fileKindColorMap = {
+  image: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+  pdf: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
+  doc: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+  sheet: "bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200",
+  video:
+    "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
+  audio:
+    "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
+  text: "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200",
+  other: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
+} as const satisfies Record<string, string>;

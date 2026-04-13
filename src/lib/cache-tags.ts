@@ -52,3 +52,19 @@ export const memoryDetailCacheTag = (orgId: string, memoryId: string): string =>
 
 export const memoryDocsCacheTag = (orgId: string, memoryId: string): string =>
   `memory-docs-${orgId}-${memoryId}`;
+
+/**
+ * Cache tag for file list queries scoped to an organization
+ * @param orgId - Organization ID
+ * @returns Cache tag string: `files-${orgId}`
+ */
+export const fileCacheTag = (orgId: string): string => `files-${orgId}`;
+
+/**
+ * Cache tag for individual file detail queries
+ * @param orgId - Organization ID
+ * @param fileId - File ID
+ * @returns Cache tag string: `file-${orgId}-${fileId}`
+ */
+export const fileDetailCacheTag = (orgId: string, fileId: string): string =>
+  `file-${orgId}-${fileId}`;

@@ -3,6 +3,7 @@ export {
   enrichCustomDocumentOnUpdate,
 } from "./handles/enrich-custom-document.js";
 export { onStoreDocumentDeleted } from "./handles/on-store-document-deleted.js";
+export { onOrganizationDeleted } from "./handles/on-organization-deleted.js";
 
 import { onRequest } from "firebase-functions/v2/https";
 import { app } from "./api/app.js";
