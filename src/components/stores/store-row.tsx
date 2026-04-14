@@ -29,7 +29,7 @@ export function StoreRow({ store }: Readonly<StoreRowProps>) {
             </TableCell>
             <TableCell className="text-center">
                 <span className="text-xs text-foreground/50">
-                    {store.customCount} record{store.customCount === 1 ? "" : "s"}
+                    {store.customCount}
                 </span>
             </TableCell>
             <TableCell>

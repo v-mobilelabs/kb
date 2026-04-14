@@ -30,7 +30,7 @@ export function FileThumbnail({
     if (isPending) {
         return (
             <div
-                className={`animate-pulse rounded bg-default-200 ${className || "size-10"}`}
+                className={`animate-pulse rounded bg-default-200 aspect-square ${className || "size-10"}`}
             />
         );
     }
@@ -38,7 +38,7 @@ export function FileThumbnail({
     if (!data) {
         return (
             <div
-                className={`flex items-center justify-center rounded bg-default-100 ${className || "size-10"}`}
+                className={`flex items-center justify-center rounded bg-default-100 aspect-square ${className || "size-10"}`}
             >
                 <span className="text-xs text-default-400">?</span>
             </div>
@@ -48,11 +48,13 @@ export function FileThumbnail({
     const src = data.isImage ? data.url : data.data;
 
     return (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-            src={src}
-            alt={alt}
-            className={`rounded object-cover ${className || "size-10"}`}
-        />
+        <div className={`aspect-square overflow-hidden rounded ${className || "size-10"}`}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+                src={src}
+                alt={alt}
+                className="size-full object-cover"
+            />
+        </div>
     );
 }

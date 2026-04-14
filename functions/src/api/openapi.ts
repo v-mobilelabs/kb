@@ -148,6 +148,34 @@ export const openApiSpec = {
           updatedAt: { type: "string", format: "date-time" },
         },
       },
+      FileDownloadResponse: {
+        type: "object",
+        properties: {
+          url: { type: "string", description: "Signed download URL (15-minute expiry)" },
+          expiresIn: { type: "integer", description: "Seconds until URL expires" },
+        },
+      },
+      FileThumbnailResponse: {
+        type: "object",
+        properties: {
+          url: { type: "string", description: "Signed URL for image files" },
+          data: { type: "string", description: "Base64 data URL for non-image files" },
+          contentType: { type: "string", description: "MIME type of the file" },
+          isImage: { type: "boolean", description: "Whether the file is an image" },
+        },
+      },
+      FileUploadResponse: {
+        type: "object",
+        properties: {
+          file: { $ref: "#/components/schemas/File" },
+        },
+      },
+      FileDeleteResponse: {
+        type: "object",
+        properties: {
+          deleted: { type: "boolean" },
+        },
+      },
     },
   },
   security: [
@@ -904,12 +932,7 @@ export const openApiSpec = {
             description: "File uploaded",
             content: {
               "application/json": {
-                schema: {
-                  type: "object",
-                  properties: {
-                    file: { $ref: "#/components/schemas/File" },
-                  },
-                },
+                schema: { $ref: "#/components/schemas/FileUploadResponse" },
               },
             },
           },
@@ -939,13 +962,7 @@ export const openApiSpec = {
             description: "Signed download URL (15-minute expiry)",
             content: {
               "application/json": {
-                schema: {
-                  type: "object",
-                  properties: {
-                    url: { type: "string" },
-                    expiresIn: { type: "integer", description: "Seconds until URL expires" },
-                  },
-                },
+                schema: { $ref: "#/components/schemas/FileDownloadResponse" },
               },
             },
           },
@@ -974,15 +991,7 @@ export const openApiSpec = {
             description: "Thumbnail URL (images) or base64 icon (other types)",
             content: {
               "application/json": {
-                schema: {
-                  type: "object",
-                  properties: {
-                    url: { type: "string", description: "Signed URL (images only)" },
-                    data: { type: "string", description: "Base64 data URL (non-images)" },
-                    contentType: { type: "string" },
-                    isImage: { type: "boolean" },
-                  },
-                },
+                schema: { $ref: "#/components/schemas/FileThumbnailResponse" },
               },
             },
           },
@@ -1011,12 +1020,7 @@ export const openApiSpec = {
             description: "File deleted",
             content: {
               "application/json": {
-                schema: {
-                  type: "object",
-                  properties: {
-                    deleted: { type: "boolean" },
-                  },
-                },
+                schema: { $ref: "#/components/schemas/FileDeleteResponse" },
               },
             },
           },

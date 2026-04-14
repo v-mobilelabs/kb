@@ -131,7 +131,7 @@ export function FileTable({ files, onDeleted }: Readonly<FileTableProps>) {
                         <TableContent aria-label="Files" selectionMode="none">
                             <TableHeader>
                                 <TableColumn className="w-14"> </TableColumn>
-                                <TableColumn>Name</TableColumn>
+                                <TableColumn isRowHeader>Name</TableColumn>
                                 <TableColumn className="hidden lg:table-cell">Size</TableColumn>
                                 <TableColumn>Type</TableColumn>
                                 <TableColumn className="hidden lg:table-cell">Uploaded</TableColumn>

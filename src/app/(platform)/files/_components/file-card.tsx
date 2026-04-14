@@ -32,13 +32,11 @@ export function FileCard({ file, onDeleted }: Readonly<FileCardProps>) {
                 <div className="gap-3 p-4 space-y-3">
                     {/* Thumbnail - prominent */}
                     <div className="flex justify-center">
-                        <div className="size-32 flex items-center justify-center overflow-hidden rounded-lg bg-default-100">
-                            <FileThumbnail
-                                fileId={file.id}
-                                alt={file.originalName}
-                                className="size-full object-cover"
-                            />
-                        </div>
+                        <FileThumbnail
+                            fileId={file.id}
+                            alt={file.originalName}
+                            className="size-32"
+                        />
                     </div>
 
                     {/* Metadata */}
