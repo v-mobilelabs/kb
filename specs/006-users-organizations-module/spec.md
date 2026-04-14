@@ -153,7 +153,7 @@ Organization admins can view an audit log of all user management events (user ad
 #### User Visibility & Listing (FR-001 – FR-009)
 
 - **FR-001**: Organization admins MUST be able to access a dedicated "User Management" section within the app.
-- **FR-002**: The User Management section MUST display a paginated list (25 items per page) of all members currently in the organization, including: user name (display name), email, role (`admin` or `member`), join date, and last active timestamp.
+- **FR-002**: The User Management section MUST display a paginated list (25 items per page) of all members currently in the organization, including: user name (display name), email, baseRole (`owner`, `admin`, or `member`), join date, and last active timestamp.
 - **FR-003**: The user list MUST be sortable by: name (A→Z / Z→A), email (A→Z / Z→A), role, and join date (newest / oldest). Default sort order is join date descending.
 - **FR-004**: The user list MUST support text search by email (case-insensitive, prefix match). Substring matching is out of scope for v1.
 - **FR-005**: The admin viewing the list MUST see themselves marked distinctly (e.g., "(You)" badge or visual highlight) so they can identify their own profile.
@@ -191,11 +191,14 @@ Organization admins can view an audit log of all user management events (user ad
 
 #### Role & Permission Management (FR-031 – FR-035)
 
-- **FR-031**: Each organization member MUST have a role: `admin` or `member`.
-- **FR-032**: Only admins MUST be able to access User Management, remove members, and manage roles.
-- **FR-033**: Admins MUST be able to promote a `member` to `admin` status via the User Management UI. Promotion MUST create an immutable audit log entry.
+- **FR-031**: Each organization member MUST have a baseRole (built-in system role): `owner`, `admin`, or `member`.
+  - `owner`: Org creator; has full access; cannot be removed or demoted (requires manual admin intervention to transfer ownership).
+  - `admin`: Can manage users, view audit logs, and access/modify org resources; cannot be the last admin in org.
+  - `member`: Can view/use org resources; limited by assigned custom roles (v2, deferred).
+- **FR-032**: Only `owner` or `admin` MUST be able to access User Management, remove members, and manage baseRoles.
+- **FR-033**: Admins MUST be able to promote a `member` to `admin` status via the User Management UI (except when doing so would leave zero admins; see FR-019). Promotion MUST create an immutable audit log entry.
 - **FR-034**: Admins MUST be able to demote an `admin` to `member` status (except when doing so would leave zero admins; see FR-019). Demotion MUST create an audit log entry.
-- **FR-035**: The user who creates an organization MUST automatically be assigned the `admin` role for that organization.
+- **FR-035**: The user who creates an organization MUST automatically be assigned the `owner` baseRole for that organization. Subsequent admins are assigned `admin` baseRole.
 
 #### Data Deletion & Scheduling (FR-036 – FR-043)
 
@@ -234,16 +237,32 @@ Organization admins can view an audit log of all user management events (user ad
 
 ---
 
+### Scope Clarification: v1 vs v2 Features
+
+**v1 (This Spec)**:
+- ✅ User visibility, listing, search, pagination, sorting
+- ✅ User removal with soft-delete + hard-delete scheduling (grace period recovery)
+- ✅ Multi-org membership + org switching
+- ✅ System baseRoles (owner, admin, member)
+- ✅ Audit logging for all user management events
+- ✅ Session invalidation on removal
+
+**v2 (Deferred)**:
+- ⏳ Custom roles (create, update, delete per org)
+- ⏳ ABAC policies (attribute-based access control)
+- ⏳ Fine-grained permission management
+
 ### Success Criteria
 
-- ✅ Org admins can view a complete, sortable, searchable list of members in their org.
-- ✅ Org admins can remove members and all member's org-scoped data is scheduled for deletion.
+- ✅ Org admins/owners can view a complete, sortable, searchable list of members in their org.
+- ✅ Org admins/owners can remove members and all member's org-scoped data is scheduled for deletion.
 - ✅ Removed users cannot access the org and their global profile persists.
 - ✅ Users can belong to multiple organizations and switch between them seamlessly.
-- ✅ Role promotions and demotions are audited and communicated to affected users.
+- ✅ BaseRole promotions and demotions are audited and communicated to affected users.
 - ✅ Audit logs are immutable, queryable, and retained for compliance (never deleted).
 - ✅ Deletion scheduling prevents data loss via grace period and recovery mechanisms.
 - ✅ System performance is acceptable (queries < 500 ms, removals < 2 s, deletions < 24 h).
+- ✅ Email notifications sent on removal, promotion, demotion (infrastructure task required).
 
 ---
 
@@ -332,7 +351,7 @@ interface AuditLogResponse {
 
 interface AuditLogEntry {
   id: string;
-  eventType: "USER_ADDED" | "USER_REMOVED" | "ROLE_PROMOTED" | "ROLE_DEMOTED";
+  eventType: "USER_ADDED" | "USER_REMOVED" | "BASE_ROLE_CHANGED" | "MEMBERSHIP_RESTORED" | "API_KEY_REVOKED_ON_REMOVAL";
   actorId: string; // admin who performed action
   actorEmail: string;
   affectedUserId: string;
@@ -340,8 +359,8 @@ interface AuditLogEntry {
   timestamp: Date;
   details: {
     reason?: string; // optional reason for removal
-    previousRole?: "admin" | "member"; // for role changes
-    newRole?: "admin" | "member"; // for role changes
+    previousBaseRole?: "owner" | "admin" | "member"; // for role changes
+    newBaseRole?: "owner" | "admin" | "member"; // for role changes
   };
   outcome: "success" | "failure";
   errorMessage?: string;

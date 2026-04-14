@@ -51,6 +51,8 @@ Tasks are organized by implementation phase. Each task includes:
 
 - [ ] T008 [P] Update Firestore security rules in `firestore.rules`: add read access for memberships (org members only), audit log read for org admins with `audit:read` permission, write access for Cloud Functions only (authenticated)
 
+- [ ] T006a Backfill existing org memberships from old schema to new in `functions/src/migrations/backfill-org-memberships.ts`: convert existing org creators to `baseRole="owner"`, existing admins to `baseRole="admin"`, verify `memberCount`/`adminCount` accurate, write dry-run and apply modes; test on staging before production
+
 ---
 
 ## Phase 2: Use Cases, Validation & Data Access Layer (4-5 Days)
@@ -74,6 +76,8 @@ Tasks are organized by implementation phase. Each task includes:
 
 - [ ] T012 [P] Implement server actions wrapping use cases in `src/actions/user-management-actions.ts`: `listOrgUsers`, `removeOrgUser`, `promoteOrgUser`, `demoteOrgUser`, `listOrgAudit`, etc.; each exports type-safe Next.js server function
 
+- [ ] T012a Set up email notification infrastructure in `src/lib/notifications/`: create email template library (offboarding, promotion, demotion events), implement notification queue (Cloud Tasks / Firestore background function), add retry logic (up to 3 retries within 24hrs), error logging; acceptance: mock email service callable in T028 integration tests
+
 ---
 
 ## Phase 3: RTDB Sync & Fast Path Caching (2-3 Days)
@@ -81,14 +85,16 @@ Tasks are organized by implementation phase. Each task includes:
 **Goal**: Set up Realtime Database cache for sub-10ms permission checks and sync from Firestore mutations.
 
 **Acceptance Criteria**:
-- RTDB structure mirrors Firestore with all role/permission data
-- Permission evaluation < 50 ms from RTDB
+- RTDB structure mirrors Firestore with all role/permission data (v1: system roles only; v2: custom roles + policies)
+- Permission evaluation < 50 ms from RTDB for system roles (v1)
 - RTDB sync transactional with Firestore writes
 - Fallback to Firestore on RTDB miss
 
 ### Phase 3 Tasks
 
-- [ ] T013 Create RTDB structure and initial sync logic in `src/lib/firebase/rtdb-sync.ts`: sync roles (`/orgs/{orgId}/roles/`), policies (`/orgs/{orgId}/policies/`), member permissions (`/orgs/{orgId}/memberPermissions/{userId}`); handle full resyncs and incremental updates
+- [ ] T013b Implement session revocation service in `src/lib/auth/session-revocation.ts`: define token revocation mechanism (RTDB token blacklist or Firebase Auth custom claims), implement broadcast/refresh logic (middleware checks RTDB on each request), ensure removed users' all sessions invalidated within 5 minutes; acceptance: session test in T030 verifies revocation
+
+- [ ] T013b Implement session revocation service in `src/lib/auth/session-revocation.ts`: define token revocation mechanism (RTDB token blacklist or Firebase Auth custom claims), implement broadcast/refresh logic (middleware checks RTDB on each request), ensure removed users' all sessions invalidated within 5 minutes; acceptance: session test in T030 verifies revocation
 
 - [ ] T014 [P] Implement permission evaluation service in `src/lib/permissions/evaluate-permissions.ts`: check RTDB first (< 50ms), fall back to Firestore for miss, aggregate permissions from roles + ABAC policies, cache result for 60 seconds
 
@@ -165,17 +171,17 @@ Tasks are organized by implementation phase. Each task includes:
 
 - [ ] T027 Write unit tests for Zod validators in `src/data/organizations/__tests__/schemas.test.ts`: test all schemas with valid/invalid inputs, edge cases (empty strings, special chars, boundary values)
 
-- [ ] T028 [P] Write integration tests for use cases in `src/data/organizations/__tests__/use-cases.integration.test.ts`: test `removeUserFromOrg` flow (remove member, verify deletion task created, verify audit log entry), test recovery (re-add user within grace period, verify deletion task cancelled), test promotion/demotion, test permission checks
+- [ ] T028 [P] Write integration tests for use cases in `src/data/organizations/__tests__/use-cases.integration.test.ts`: test `removeUserFromOrg` flow (remove member, verify deletion task created, verify audit log entry), test recovery (re-add user within grace period, verify deletion task cancelled), test promotion/demotion, test permission checks, test email service called on removal/promotion/demotion (mock), test simultaneous removal of last admin (race condition), verify session revocation within 5 min
 
-- [ ] T029 [P] Write E2E frontend tests in `cypress/e2e/members.cy.ts`: test user list display + sorting + search, test removal modal flow, test org switcher, test audit log filtering; use test fixtures for org/user setup
+- [ ] T029 [P] Write E2E frontend tests in `cypress/e2e/members.cy.ts`: test user list display + sorting + search, test removal modal flow, test org switcher, test org switcher redirect when removed from current org, test audit log filtering; use test fixtures for org/user setup; edge cases: empty org state, last page pagination with deleted user
 
-- [ ] T030 [P] Implement security & compliance tests in `src/data/organizations/__tests__/security.test.ts`: verify admins can't remove themselves, verify admins can't remove last admin, verify non-admin can't access User Management, verify session invalidation on removal, verify audit logs never deleted
+- [ ] T030 [P] Write security & compliance tests in `src/data/organizations/__tests__/security.test.ts`: verify admins can't remove themselves, verify admins can't remove last admin, verify non-admin can't access User Management, verify session invalidation on removal (< 5 min), verify audit logs never deleted (attempt delete → error), verify owner role cannot be demoted or removed, test API key revocation failures and retry
 
 - [ ] T031 [P] Set up performance benchmarks in `scripts/perf-benchmark.ts`: measure query time for lists (10k members), removal time (with cascades), permission evaluation time (RTDB vs Firestore); record baseline and alert on regression
 
 - [ ] T032 [P] Configure monitoring & alerting in `functions/src/lib/monitoring.ts`: set up OpenTelemetry spans for all use cases, log audit events, track error rates (removal failures, hard-delete failures), send alerts to admin Slack channel on failures
 
-- [ ] T033 [P] Document compliance & audit trail in `COMPLIANCE.md`: describe audit retention (indefinite), hard-delete policy (24h grace period), recovery window (30 days default, configurable), data residency, encryption at rest/transit
+- [ ] T033 [P] Document compliance & audit trail in `COMPLIANCE.md`: describe audit retention (indefinite, never deleted), hard-delete policy (24h grace period, default 30 days per org, configurable), recovery window (re-add within scheduledDeleteAt cancels hard-delete), data residency (Firebase region), encryption at rest/transit (Firestore native), RBAC enforcement (server-side only, v1 system roles only, v2 custom roles deferred)
 
 - [ ] T034 [P] Prepare rollback procedure in `ROLLBACK.md`: document steps to revert Firestore schema (restore from backup), downgrade RTDB, disable scheduled function, restore frontend from previous commit; test rollback on dev environment
 
