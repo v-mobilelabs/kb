@@ -80,3 +80,12 @@ export const contextDetailCacheTag = (
 
 export const contextDocsCacheTag = (orgId: string, contextId: string): string =>
   `context-docs-${orgId}-${contextId}`;
+
+// ── Users & Organizations Module ──────────────────────────────────────────────
+
+export const orgMembersCacheTag = (orgId: string): string =>
+  `org-members-${orgId}`;
+
+export const orgAuditCacheTag = (orgId: string): string => `org-audit-${orgId}`;
+
+export const userOrgsCacheTag = (uid: string): string => `user-orgs-${uid}`;

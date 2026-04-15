@@ -17,7 +17,9 @@ export const DayBucketSchema = z.object({
 export const DashboardMetricsSchema = z.object({
   totalActiveKeys: z.number().int().min(0),
   totalStores: z.number().int().min(0),
-  totalMemories: z.number().int().min(0),
+  totalFiles: z.number().int().min(0),
+  totalContexts: z.number().int().min(0),
+  totalMembers: z.number().int().min(0),
   keyActivity: z.array(DayBucketSchema),
   errors: z.array(DayBucketSchema),
 });

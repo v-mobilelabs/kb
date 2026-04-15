@@ -39,9 +39,9 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
       orgId,
       query: parsed.query,
       filters: parsed.filters,
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+
       topK: parsed.topK!,
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+
       enableRagEvaluation: parsed.enableRagEvaluation!,
     });
 

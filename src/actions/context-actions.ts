@@ -17,12 +17,8 @@ import { UpdateDocumentUseCase } from "@/data/contexts/use-cases/update-document
 import { DeleteDocumentUseCase } from "@/data/contexts/use-cases/delete-document-use-case";
 import { GetDocumentUseCase } from "@/data/contexts/use-cases/get-document-use-case";
 import { ListDocumentsUseCase } from "@/data/contexts/use-cases/list-documents-use-case";
-import type {
-  PaginatedContextResult,
-} from "@/data/contexts/repositories/context-repository";
-import type {
-  PaginatedDocumentResult,
-} from "@/data/contexts/repositories/context-document-repository";
+import type { PaginatedContextResult } from "@/data/contexts/repositories/context-repository";
+import type { PaginatedDocumentResult } from "@/data/contexts/repositories/context-document-repository";
 import type { Result, AppError } from "@/lib/result";
 import type { Context } from "@/data/contexts/models/context.model";
 import type { ContextDocument } from "@/data/contexts/models/context-document.model";
@@ -100,18 +96,24 @@ export async function createDocumentAction(
 ): Promise<Result<ContextDocument, AppError>> {
   return withAuthenticatedContext(async (ctx) => {
     console.log("[createDocumentAction] rawInput:", rawInput);
+    const input = rawInput as Record<string, unknown>;
     const uc = new CreateDocumentUseCase(ctx);
     const result = await uc.execute({
-      ...(rawInput as Record<string, unknown>),
+      ...input,
       orgId: ctx.orgId,
     });
     console.log("[createDocumentAction] result.ok:", result.ok);
     if (!result.ok) {
       console.error("[createDocumentAction] error:", result.error);
     }
-    if (result.ok) {
-      const contextId = result.value.contextId;
-      console.log("[createDocumentAction] Revalidating cache tags for org:", ctx.orgId, "context:", contextId);
+    if (result.ok && typeof input.contextId === "string") {
+      const contextId = input.contextId;
+      console.log(
+        "[createDocumentAction] Revalidating cache tags for org:",
+        ctx.orgId,
+        "context:",
+        contextId,
+      );
       revalidateTag(contextDocsCacheTag(ctx.orgId, contextId), "max");
       revalidateTag(contextDetailCacheTag(ctx.orgId, contextId), "max");
       console.log("[createDocumentAction] Cache tags revalidated");
@@ -124,13 +126,14 @@ export async function updateDocumentAction(
   rawInput: unknown,
 ): Promise<Result<ContextDocument, AppError>> {
   return withAuthenticatedContext(async (ctx) => {
+    const input = rawInput as Record<string, unknown>;
     const uc = new UpdateDocumentUseCase(ctx);
     const result = await uc.execute({
-      ...(rawInput as Record<string, unknown>),
+      ...input,
       orgId: ctx.orgId,
     });
-    if (result.ok) {
-      const contextId = result.value.contextId;
+    if (result.ok && typeof input.contextId === "string") {
+      const contextId = input.contextId;
       revalidateTag(contextDocsCacheTag(ctx.orgId, contextId), "max");
     }
     return result;

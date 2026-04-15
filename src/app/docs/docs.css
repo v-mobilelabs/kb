@@ -1,0 +1,75 @@
+/* Docs-specific styles */
+
+.docs-content {
+  /* Smooth scrolling for internal links */
+  scroll-behavior: smooth;
+}
+
+.docs-content h2 {
+  scroll-margin-top: 6rem; /* Account for fixed header */
+}
+
+.docs-content h3 {
+  scroll-margin-top: 6rem;
+}
+
+.docs-content code {
+  font-family: monospace;
+  font-size: 0.875rem;
+  padding: 0.375rem 0.5rem;
+  border-radius: 0.375rem;
+  color: var(--accent);
+  background-color: var(--overlay);
+}
+
+.docs-content pre {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  overflow-x: auto;
+}
+
+.docs-content pre code {
+  background-color: transparent;
+  padding: 0;
+  color: var(--foreground);
+}
+
+.docs-content a {
+  color: var(--accent);
+  text-decoration-line: none;
+  transition: text-decoration 0.2s;
+}
+
+.docs-content a:hover {
+  text-decoration-line: underline;
+}
+
+.docs-content ul {
+  list-style-position: inside;
+  list-style-type: disc;
+}
+
+.docs-content ul li {
+  margin-bottom: 0.5rem;
+}
+
+.docs-content ol {
+  list-style-position: inside;
+  list-style-type: decimal;
+}
+
+.docs-content ol li {
+  margin-bottom: 0.5rem;
+}
+
+.docs-content blockquote {
+  border-left: 4px solid var(--accent);
+  background-color: var(--overlay);
+  padding-left: 1rem;
+  padding-right: 1rem;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-radius: 0 0.5rem 0.5rem 0;
+}

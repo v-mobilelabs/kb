@@ -210,7 +210,11 @@ export async function getMemoryDocuments(
   orgId: string,
   memoryId: string,
   apiKeyId: string,
-): Promise<{ items: MemoryDocumentData[]; hasNext: boolean; nextCursor: string | null }> {
+): Promise<{
+  items: MemoryDocumentData[];
+  hasNext: boolean;
+  nextCursor: string | null;
+}> {
   const pageSize = 25;
   const snap = await adminDb
     .collection(`organizations/${orgId}/memories/${memoryId}/documents`)
@@ -235,9 +239,10 @@ export async function getMemoryDocuments(
   const hasNext = allItems.length > pageSize;
   const items = hasNext ? allItems.slice(0, pageSize) : allItems;
   const lastItem = items.at(-1);
-  const nextCursor = hasNext && lastItem ?
-    String((lastItem.createdAt as Timestamp).toMillis()) :
-    null;
+  const nextCursor =
+    hasNext && lastItem ?
+      String((lastItem.createdAt as Timestamp).toMillis()) :
+      null;
 
   await logApiKeyUsageSuccess(orgId, apiKeyId, {
     action: "get_memory_documents",

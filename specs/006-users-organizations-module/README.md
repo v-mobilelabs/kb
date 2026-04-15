@@ -12,18 +12,18 @@ This specification package includes everything needed to plan, implement, and la
 
 ### Core Documents
 
-| Document | Purpose | Audience | Time to Read |
-| ---- | ---- | ---- | ---- |
-| **[plan.md](plan.md)** | High-level feature overview, business goals, design decisions, and roadmap | Product, Exec, Team Leads | 20 min |
-| **[spec.md](spec.md)** | Comprehensive functional & non-functional requirements, user scenarios, API endpoints, edge cases | Engineering, Product | 60 min |
-| **[data-model.md](data-model.md)** | Firestore collections, TypeScript models, indexes, and database schema | Backend Engineers | 40 min |
-| **[tasks.md](tasks.md)** | Sprint-by-sprint breakdown: 20 implementation tasks with estimates, dependencies, acceptance criteria | Engineering Leads, QA | 45 min |
-| **[quickstart.md](quickstart.md)** | Developer quick-start guide: 5-min overview, file structure, phase-by-phase implementation workflow, code examples | Backend/Frontend Engineers | 30 min |
+| Document                           | Purpose                                                                                                            | Audience                   | Time to Read |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------ | -------------------------- | ------------ |
+| **[plan.md](plan.md)**             | High-level feature overview, business goals, design decisions, and roadmap                                         | Product, Exec, Team Leads  | 20 min       |
+| **[spec.md](spec.md)**             | Comprehensive functional & non-functional requirements, user scenarios, API endpoints, edge cases                  | Engineering, Product       | 60 min       |
+| **[data-model.md](data-model.md)** | Firestore collections, TypeScript models, indexes, and database schema                                             | Backend Engineers          | 40 min       |
+| **[tasks.md](tasks.md)**           | Sprint-by-sprint breakdown: 20 implementation tasks with estimates, dependencies, acceptance criteria              | Engineering Leads, QA      | 45 min       |
+| **[quickstart.md](quickstart.md)** | Developer quick-start guide: 5-min overview, file structure, phase-by-phase implementation workflow, code examples | Backend/Frontend Engineers | 30 min       |
 
 ### Checklists & Planning
 
-| Document | Purpose | When to Use |
-| ---- | ---- | ---- |
+| Document                                                      | Purpose                                                                                 | When to Use           |
+| ------------------------------------------------------------- | --------------------------------------------------------------------------------------- | --------------------- |
 | **[pre-implementation.md](checklists/pre-implementation.md)** | Pre-sprint checklist: docs review, environment setup, testing strategy, security review | Before sprint kickoff |
 
 ---
@@ -31,12 +31,14 @@ This specification package includes everything needed to plan, implement, and la
 ## 🎯 Quick Navigator
 
 ### For Product Managers & Stakeholders
+
 1. Start with [plan.md](plan.md) → Business goals and design decisions
 2. Review user personas and use cases in [plan.md](plan.md)
 3. Check success metrics in [plan.md](plan.md) and [tasks.md](tasks.md)
 4. Skip the technical details; focus on "Key Design Decisions" section
 
 ### For Engineering Leads & Architects
+
 1. Read [plan.md](plan.md) for context and roadmap
 2. Deep-dive into [spec.md](spec.md) for all requirements
 3. Review [data-model.md](data-model.md) for schema and design
@@ -44,6 +46,7 @@ This specification package includes everything needed to plan, implement, and la
 5. Reference [pre-implementation.md](checklists/pre-implementation.md) for pre-launch readiness
 
 ### For Backend Engineers
+
 1. Start with [quickstart.md](quickstart.md) for 5-min overview
 2. Read [data-model.md](data-model.md) for Firestore schema
 3. Reference [spec.md](spec.md) API sections for endpoint contracts
@@ -51,6 +54,7 @@ This specification package includes everything needed to plan, implement, and la
 5. Follow tasks in [tasks.md](tasks.md) Phase 2-4 (API, Cloud Functions)
 
 ### For Frontend Engineers
+
 1. Start with [quickstart.md](quickstart.md) for 5-min overview
 2. Review user scenarios in [spec.md](spec.md) (User Story 1, 3, 4)
 3. Check UI requirements in [spec.md](spec.md) Functional Requirements (FR-001 – FR-009, FR-023 – FR-030)
@@ -58,6 +62,7 @@ This specification package includes everything needed to plan, implement, and la
 5. Follow tasks in [tasks.md](tasks.md) Phase 3 (UI Components)
 
 ### For QA & Testing Teams
+
 1. Review all User Scenarios in [spec.md](spec.md)
 2. Study Edge Cases section in [spec.md](spec.md)
 3. Review acceptance criteria for each task in [tasks.md](tasks.md)
@@ -65,6 +70,7 @@ This specification package includes everything needed to plan, implement, and la
 5. Use spec.md success criteria for test case setup
 
 ### For Security & Compliance Teams
+
 1. Read "Key Design Decisions" section in [plan.md](plan.md) — especially soft-delete strategy
 2. Review Data Model sections in [data-model.md](data-model.md) — audit logs and immutability
 3. Check Firestore Security Rules pseudocode in [data-model.md](data-model.md)
@@ -98,13 +104,13 @@ The User & Organization Management module provides organization admins with tool
 
 ### Problem It Solves
 
-| Before | After |
-| ---- | ---- |
-| Admins have no visibility into org membership | Admins see complete member list with roles, join dates, activity |
-| No way to remove users (risky to keep departed users) | Admins can safely remove users; 30-day recovery window provided |
-| No support for multi-org workflows | Users can join multiple orgs and switch contexts seamlessly |
-| No audit trail of who did what | Immutable audit log for compliance & investigations |
-| Manual data cleanup required | Background job automatically hard-deletes after grace period |
+| Before                                                | After                                                            |
+| ----------------------------------------------------- | ---------------------------------------------------------------- |
+| Admins have no visibility into org membership         | Admins see complete member list with roles, join dates, activity |
+| No way to remove users (risky to keep departed users) | Admins can safely remove users; 30-day recovery window provided  |
+| No support for multi-org workflows                    | Users can join multiple orgs and switch contexts seamlessly      |
+| No audit trail of who did what                        | Immutable audit log for compliance & investigations              |
+| Manual data cleanup required                          | Background job automatically hard-deletes after grace period     |
 
 ---
 
@@ -154,11 +160,13 @@ Admin confirms
 ### Data Model Highlights
 
 **New Firestore Collections**:
+
 - `organizations/{orgId}/memberships/{userId}` — tracks user-org relationships (role, join date, soft-delete status)
 - `deletionTasks/{taskId}` — tracks scheduled hard-delete operations
 - `organizations/{orgId}/auditLogs/{logId}` — immutable audit trail
 
 **Modified Existing Collections**:
+
 - `profiles/{userId}` — added concept of primary org
 - `organizations/{orgId}` — added memberCount, adminCount, gracePeriodDays, notificationsEnabled
 
@@ -169,6 +177,7 @@ Admin confirms
 ## 📊 Metrics & Success Criteria
 
 ### Performance Targets
+
 - User list query (10k members): < 500 ms
 - User removal action: < 2 s
 - Session invalidation: < 5 min
@@ -176,11 +185,13 @@ Admin confirms
 - Audit log query: < 1 s
 
 ### Adoption Targets
+
 - Admin adoption rate: > 80% of orgs
 - Data recovery success (grace period): > 95%
 - Accidental removal rate: < 1% (prevented by confirmation modal)
 
 ### Quality Targets
+
 - Test coverage: 80%+ new code
 - Integration test suite: all user stories covered
 - Production error rate: < 0.1% for Cloud Functions
@@ -190,30 +201,35 @@ Admin confirms
 ## 🗓️ Implementation Timeline
 
 ### Phase 1: Foundation (Week 1) — 2 days
+
 - Set up Firestore collections, indexes, security rules
 - Create TypeScript models and Zod schemas
 - Backfill membership data from existing users
 - **Deliverable**: Firestore schema ready; tests passing
 
 ### Phase 2: Core API (Week 1-2) — 3 days
+
 - Implement server actions (list, remove, promote, demote, switch orgs)
 - Add session invalidation on user removal
 - Write integration tests
 - **Deliverable**: All API endpoints working; tests passing
 
 ### Phase 3: UI Components (Week 2) — 3 days
+
 - Build User Management page (table, filters, pagination)
 - Create Remove User modal
 - Build org switcher and role management UI
 - **Deliverable**: UI fully functional; styled with HeroUI
 
 ### Phase 4: Cloud Functions & Background Jobs (Week 2-3) — 2 days
+
 - Create scheduled deletion Cloud Function
 - Implement email notifications
 - Set up session invalidation broadcast
 - **Deliverable**: Background jobs working; emails sending
 
 ### Phase 5: Testing & Launch (Week 3) — 2 days
+
 - Integration tests (all workflows)
 - Load testing (10k member orgs)
 - Performance optimization if needed
@@ -238,27 +254,35 @@ Admin confirms
 ## ❓ Frequently Asked Questions
 
 ### Q: What happens to the user's global profile when they're removed from an org?
+
 **A**: Their global profile remains unchanged. They can still access their auth account and join other organizations. Only org-specific data (stores, keys, access) is removed.
 
 ### Q: Can a user recover data within the grace period?
+
 **A**: Yes! If the user is re-added to the org within 30 days (default), all soft-deleted data is restored and the hard-delete task is cancelled.
 
 ### Q: What if the last admin is removed by mistake?
+
 **A**: The action is blocked by the system. You cannot remove the last admin from an org. Another member must be promoted to admin first.
 
 ### Q: Are audit logs ever deleted?
+
 **A**: No. Audit logs are immutable and retained indefinitely for compliance. After 1 year, they may be archived to cold storage but are never hard-deleted.
 
 ### Q: How does multi-org membership work?
+
 **A**: Users have a primary org (used for login landing). They can additionally belong to other orgs and switch between them via an org switcher. Switching org changes the app context but does NOT change their primary org.
 
 ### Q: What if the deletion job fails?
+
 **A**: The task is retried up to 3 times with exponential backoff (1 min, 5 min, 30 min). If all retries fail, the task is marked as failed and surfaced to admins for manual investigation.
 
 ### Q: Can admins do bulk operations (remove multiple users at once)?
+
 **A**: Not in v1. Bulk operations are deferred to v1.1 for safety (avoid mass removal mistakes).
 
 ### Q: What about SSO or directory sync?
+
 **A**: Out of scope for v1. Users are currently added via admin action or magic link + org code. SSO/LDAP integration is a future feature.
 
 ---
@@ -281,16 +305,19 @@ This module is independent of:
 ## 📞 Support & Questions
 
 ### Before Development Starts
+
 - Have questions about requirements? → Review [spec.md](spec.md) Clarifications section
 - Unclear about data model? → Review [data-model.md](data-model.md) with diagrams
 - Need implementation examples? → Check [quickstart.md](quickstart.md) code snippets
 
 ### During Development
+
 - Blocked on Firestore indexes? → Check Firebase Console; create indexes if missing
 - Not sure about API contract? → Review [spec.md](spec.md) API sections
 - Need debugging help? → Check [quickstart.md](quickstart.md) Troubleshooting section
 
 ### Pre-Launch
+
 - Not ready for launch? → Check [pre-implementation.md](checklists/pre-implementation.md) for sign-off criteria
 - Issues in staging? → Run through rollback checklist
 - Need monitoring help? → Review monitoring section in [pre-implementation.md](checklists/pre-implementation.md)
@@ -350,21 +377,23 @@ Before kicking off development:
 
 ## 📄 Document Versions & History
 
-| Version | Date | Author | Status |
-| ---- | ---- | ---- | ---- |
-| 1.0 | 2026-04-14 | [AI Assistant] | 📋 Final Draft → Ready for Review |
+| Version | Date       | Author         | Status                            |
+| ------- | ---------- | -------------- | --------------------------------- |
+| 1.0     | 2026-04-14 | [AI Assistant] | 📋 Final Draft → Ready for Review |
 
 ---
 
 ## 🎉 Next Steps
 
 ### For Product & Leadership
+
 1. **Review & Approve** [plan.md](plan.md) (20 min)
 2. **Confirm Success Metrics** align with product roadmap
 3. **Approve Timeline** (5 weeks total: 3 dev + 2 QA/launch)
 4. **Sign Off** on pre-implementation checklist
 
 ### For Engineering
+
 1. **Review Complete Specification** ([spec.md](spec.md), [data-model.md](data-model.md), [quickstart.md](quickstart.md))
 2. **Populate Sprint Board** with tasks from [tasks.md](tasks.md)
 3. **Assign Owners** to each phase (backend, frontend, QA, DevOps)
@@ -372,6 +401,7 @@ Before kicking off development:
 5. **Kick Off Phase 1** (Firestore setup)
 
 ### For QA & Operations
+
 1. **Understand Test Strategy** from [spec.md](spec.md) Edge Cases & Success Criteria
 2. **Draft Test Plan** based on acceptance criteria in [tasks.md](tasks.md)
 3. **Set Up Monitoring & Dashboards** (template at end of this document)
@@ -391,6 +421,6 @@ You now have everything needed to implement the User & Organization Management m
 ✅ **Code examples** (where to start coding)  
 ✅ **Testing strategy** (how to verify it works)  
 ✅ **Launch plan** (how to roll out safely)  
-✅ **Operational runbooks** (how to support it)  
+✅ **Operational runbooks** (how to support it)
 
 **Ready to build? Start with [quickstart.md](quickstart.md) for developers or [pre-implementation.md](checklists/pre-implementation.md) for team leads. 🚀**

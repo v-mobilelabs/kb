@@ -240,6 +240,7 @@ Organization admins can view an audit log of all user management events (user ad
 ### Scope Clarification: v1 vs v2 Features
 
 **v1 (This Spec)**:
+
 - ✅ User visibility, listing, search, pagination, sorting
 - ✅ User removal with soft-delete + hard-delete scheduling (grace period recovery)
 - ✅ Multi-org membership + org switching
@@ -248,6 +249,7 @@ Organization admins can view an audit log of all user management events (user ad
 - ✅ Session invalidation on removal
 
 **v2 (Deferred)**:
+
 - ⏳ Custom roles (create, update, delete per org)
 - ⏳ ABAC policies (attribute-based access control)
 - ⏳ Fine-grained permission management
@@ -275,6 +277,7 @@ Organization admins can view an audit log of all user management events (user ad
 Returns a paginated list of users in an organization.
 
 **Request**:
+
 ```typescript
 interface GetOrgUserListRequest {
   orgId: string;
@@ -287,6 +290,7 @@ interface GetOrgUserListRequest {
 ```
 
 **Response**:
+
 ```typescript
 interface UserListResponse {
   users: UserListItem[];
@@ -313,6 +317,7 @@ interface UserListItem {
 **Authorization**: Requires `admin` role in the org.
 
 **Firestore Query**:
+
 ```
 organizations/{orgId}/memberships
   where deletedAt == null
@@ -329,11 +334,16 @@ organizations/{orgId}/memberships
 Returns audit log entries for user management events in an organization.
 
 **Request**:
+
 ```typescript
 interface GetOrgAuditLogRequest {
   orgId: string;
   page?: number; // 1-indexed; default: 1
-  filterEventType?: "USER_ADDED" | "USER_REMOVED" | "ROLE_PROMOTED" | "ROLE_DEMOTED";
+  filterEventType?:
+    | "USER_ADDED"
+    | "USER_REMOVED"
+    | "ROLE_PROMOTED"
+    | "ROLE_DEMOTED";
   filterActorId?: string; // admin who performed the action
   filterUserId?: string; // affected user
   dateFrom?: Date;
@@ -343,6 +353,7 @@ interface GetOrgAuditLogRequest {
 ```
 
 **Response**:
+
 ```typescript
 interface AuditLogResponse {
   entries: AuditLogEntry[];
@@ -351,7 +362,12 @@ interface AuditLogResponse {
 
 interface AuditLogEntry {
   id: string;
-  eventType: "USER_ADDED" | "USER_REMOVED" | "BASE_ROLE_CHANGED" | "MEMBERSHIP_RESTORED" | "API_KEY_REVOKED_ON_REMOVAL";
+  eventType:
+    | "USER_ADDED"
+    | "USER_REMOVED"
+    | "BASE_ROLE_CHANGED"
+    | "MEMBERSHIP_RESTORED"
+    | "API_KEY_REVOKED_ON_REMOVAL";
   actorId: string; // admin who performed action
   actorEmail: string;
   affectedUserId: string;
@@ -376,6 +392,7 @@ interface AuditLogEntry {
 Returns all organizations the current user belongs to.
 
 **Response**:
+
 ```typescript
 interface UserOrgListResponse {
   organizations: UserOrgItem[];
@@ -402,6 +419,7 @@ interface UserOrgItem {
 Removes a user from an organization and schedules their org-scoped data for deletion.
 
 **Request**:
+
 ```typescript
 interface RemoveUserRequest {
   orgId: string;
@@ -411,6 +429,7 @@ interface RemoveUserRequest {
 ```
 
 **Response**:
+
 ```typescript
 interface RemoveUserResponse {
   success: boolean;
@@ -420,11 +439,13 @@ interface RemoveUserResponse {
 ```
 
 **Preconditions**:
+
 - Caller MUST be an admin in `orgId`.
 - User being removed MUST NOT be the only admin in `orgId`.
 - Caller MUST NOT remove themselves (allowed only if another admin exists).
 
 **Side Effects**:
+
 1. Set `deletedAt = now()` on user membership in `organizations/{orgId}/memberships/{userId}`.
 2. Revoke all API keys: iterate `organizations/{orgId}/apiKeys` where `createdBy == userId` and set `isRevoked = true`, `revokedAt = now()`.
 3. Soft-delete all stores: iterate `organizations/{orgId}/stores` where `createdBy == userId` and set `deletedAt = now()`.
@@ -434,6 +455,7 @@ interface RemoveUserResponse {
 7. Create audit log: insert entry with eventType `USER_REMOVED`, actor = caller, affected user = `userId`, outcome = `success`.
 
 **Errors**:
+
 - `FORBIDDEN`: Caller is not admin, or attempting to remove themselves, or removing last admin.
 - `NOT_FOUND`: User or org does not exist.
 - `INTERNAL`: Transient error during write; client should retry with exponential backoff.
@@ -447,6 +469,7 @@ interface RemoveUserResponse {
 Promotes a member to admin role.
 
 **Request**:
+
 ```typescript
 interface PromoteUserRequest {
   orgId: string;
@@ -455,6 +478,7 @@ interface PromoteUserRequest {
 ```
 
 **Response**:
+
 ```typescript
 interface PromoteUserResponse {
   success: boolean;
@@ -463,15 +487,18 @@ interface PromoteUserResponse {
 ```
 
 **Preconditions**:
+
 - Caller MUST be an admin in `orgId`.
 - Target user MUST be a member (role === "member") in that org.
 
 **Side Effects**:
+
 1. Update membership: set `role = "admin"` on `organizations/{orgId}/memberships/{userId}`.
 2. Create audit log: eventType `ROLE_PROMOTED`, previousRole = `member`, newRole = `admin`.
 3. Send email: queue promotion email to promoted user.
 
 **Errors**:
+
 - `FORBIDDEN`: Caller is not admin.
 - `CONFLICT`: Target user already has admin role.
 - `NOT_FOUND`: User or org does not exist.
@@ -483,6 +510,7 @@ interface PromoteUserResponse {
 Demotes an admin to member role.
 
 **Request**:
+
 ```typescript
 interface DemoteAdminRequest {
   orgId: string;
@@ -491,6 +519,7 @@ interface DemoteAdminRequest {
 ```
 
 **Response**:
+
 ```typescript
 interface DemoteAdminResponse {
   success: boolean;
@@ -499,6 +528,7 @@ interface DemoteAdminResponse {
 ```
 
 **Preconditions**:
+
 - Caller MUST be an admin in `orgId`.
 - Target user MUST have admin role.
 - At least one other admin MUST remain after demotion (cannot demote last admin).
@@ -512,6 +542,7 @@ interface DemoteAdminResponse {
 Switches the current user's active organization context.
 
 **Request**:
+
 ```typescript
 interface SwitchOrgRequest {
   newOrgId: string;
@@ -519,6 +550,7 @@ interface SwitchOrgRequest {
 ```
 
 **Response**:
+
 ```typescript
 interface SwitchOrgResponse {
   success: boolean;
@@ -528,6 +560,7 @@ interface SwitchOrgResponse {
 ```
 
 **Preconditions**:
+
 - User MUST belong to `newOrgId` (membership record exists and not soft-deleted).
 
 **Side Effects**: None persistent; org context changes in session/client state. Note: primary org is NOT updated; that requires explicit profile update.
@@ -539,6 +572,7 @@ interface SwitchOrgResponse {
 Sets the user's preferred primary organization (used for login landing page).
 
 **Request**:
+
 ```typescript
 interface SetPrimaryOrgRequest {
   orgId: string;
@@ -546,6 +580,7 @@ interface SetPrimaryOrgRequest {
 ```
 
 **Response**:
+
 ```typescript
 interface SetPrimaryOrgResponse {
   success: boolean;

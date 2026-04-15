@@ -149,6 +149,15 @@ export class FileRepository extends AbstractFirebaseRepository<File> {
     return { files, nextCursor, total };
   }
 
+  /**
+   * Count total files for this organization.
+   * Uses Firestore's efficient count() API.
+   */
+  async countByOrg(): Promise<number> {
+    const countSnap = await this.collection().count().get();
+    return countSnap.data().count;
+  }
+
   async deleteFile(fileId: string): Promise<boolean> {
     const existsRes = await this.exist(fileId);
     if (!existsRes.ok || !existsRes.value) return false;

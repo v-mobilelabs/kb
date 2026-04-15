@@ -6,7 +6,12 @@ import {
   validateRequestParams,
   sendErrorResponse,
 } from "../lib/request-validator.js";
-import { getMemory, addMemoryDocument, createMemory, getMemoryDocuments } from "../../data/memory.js";
+import {
+  getMemory,
+  addMemoryDocument,
+  createMemory,
+  getMemoryDocuments,
+} from "../../data/memory.js";
 import type { AuthenticatedRequest } from "../middleware/validate-api-key.js";
 import { logApiKeyUsageFailure } from "../../lib/audit-logger.js";
 

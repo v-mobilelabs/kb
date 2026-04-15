@@ -37,7 +37,8 @@ export class UpdateDocumentUseCase extends BaseUseCase<
     input: z.infer<typeof UpdateDocumentSchema>,
   ): Promise<Result<ContextDocument, AppError>> {
     return this.docRepo.update(input.orgId, input.contextId, input.docId, {
-      name: input.name,
+      role: input.role,
+      parts: input.parts,
       metadata: input.metadata,
     });
   }

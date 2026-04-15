@@ -33,13 +33,13 @@ export function StoreCreateForm({ orgId, onClose }: Readonly<StoreCreateFormProp
     const [formError, setFormError] = useState("");
 
     const mutation = useMutation<
-        any,
+        unknown,
         Error,
         void
     >({
         mutationFn: () => createStoreAction({ name: name.trim(), description: description.trim() || undefined, enableRagEvaluation }),
-        ...useOptimisticListAdd("stores", orgId),
-        onSuccess: (result) => {
+        ...useOptimisticListAdd("stores", [orgId]),
+        onSuccess: (result: any) => {
             if (!result.ok) {
                 if (result.error.code === "CONFLICT") {
                     setNameError(result.error.message);

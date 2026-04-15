@@ -37,7 +37,7 @@ export function StoreActionsProvider({ orgId, children }: Readonly<StoreActionsP
 
     const deleteMutation = useMutation({
         mutationFn: (storeId: string) => deleteStoreAction({ storeId }),
-        onSuccess: (result) => {
+        onSuccess: (result: any) => {
             if (!result.ok) return;
             setStoreToDelete(null);
             router.refresh();

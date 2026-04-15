@@ -15,7 +15,7 @@ import { QueryClient, useQueryClient } from "@tanstack/react-query";
 import type { UseMutationOptions } from "@tanstack/react-query";
 
 type MutationOptions = Pick<
-  UseMutationOptions<any, Error, any, unknown>,
+  UseMutationOptions<unknown, Error, unknown, unknown>,
   "onMutate" | "onError" | "onSettled"
 >;
 
@@ -81,8 +81,9 @@ export function useOptimisticUpdate<T>(
       );
       return ctx;
     },
-    onError: (_err, _vars, ctx: any) => {
-      rollbackCache(queryClient, queryKey, ctx?.prevData);
+    onError: (_err, _vars, onMutateResult) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      rollbackCache(queryClient, queryKey, (onMutateResult as any)?.prevData);
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey });
@@ -96,13 +97,21 @@ export function useOptimisticUpdate<T>(
  * ```ts
  * const mutation = useMutation({
  *   mutationFn: createAction,
- *   ...useOptimisticListAdd('documents', orgId, storeId, newItem)
+ *   ...useOptimisticListAdd('documents', [orgId, storeId], newItem)
+ * })
+ * ```
+ * Or without optimisticData:
+ * ```ts
+ * const mutation = useMutation({
+ *   mutationFn: createStoreAction,
+ *   ...useOptimisticListAdd('stores', [orgId])
  * })
  * ```
  */
 export function useOptimisticListAdd<T extends { id?: string | number }>(
   queryKeyPrefix: string,
-  ...queryKeyParams: (string | number)[]
+  queryKeyParams: (string | number)[],
+  optimisticData?: T,
 ): MutationOptions {
   const queryClient = useQueryClient();
   const queryKey = [queryKeyPrefix, ...queryKeyParams];
@@ -111,18 +120,36 @@ export function useOptimisticListAdd<T extends { id?: string | number }>(
     onMutate: async () => {
       queryClient.cancelQueries({ queryKey });
       const prevData = queryClient.getQueryData(queryKey);
-      // For infinite queries, update first page
-      if (prevData && typeof prevData === "object" && "pages" in prevData) {
-        queryClient.setQueryData(queryKey, (old: any) => ({
-          ...old,
-          pages: old?.pages ? [old.pages[0], ...old.pages.slice(1)] : old.pages,
-        }));
+      // For infinite queries, update first page with optimistic data if provided
+      if (
+        optimisticData &&
+        prevData &&
+        typeof prevData === "object" &&
+        "pages" in prevData
+      ) {
+        queryClient.setQueryData(
+          queryKey,
+          (old: Record<string, unknown> | undefined) => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const oldAny = old as any;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const pages = oldAny?.pages as any[];
+            return {
+              ...old,
+              pages: pages
+                ? [optimisticData, ...(pages || []).slice(1)]
+                : oldAny?.pages,
+            };
+          },
+        );
       }
       return { prevData };
     },
-    onError: (_err, _vars, ctx: any) => {
-      if (ctx?.prevData) {
-        queryClient.setQueryData(queryKey, ctx.prevData);
+    onError: (_err, _vars, onMutateResult) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const result = onMutateResult as any;
+      if (result?.prevData) {
+        queryClient.setQueryData(queryKey, result.prevData);
       }
     },
     onSettled: () => {
@@ -158,40 +185,61 @@ export function useOptimisticListRemove<T extends { id: string | number }>(
       if (prevData && typeof prevData === "object") {
         if ("pages" in prevData) {
           // Infinite query - filter items from all pages
-          queryClient.setQueryData(queryKey, (old: any) => {
-            const newPages =
-              old?.pages?.map((page: any) => ({
-                ...page,
-                items:
-                  page.items?.filter((item: T) => item.id !== itemIdToRemove) ||
-                  [],
-              })) || [];
-            return { ...old, pages: newPages };
-          });
+          queryClient.setQueryData(
+            queryKey,
+            (old: Record<string, unknown> | undefined) => {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const oldAny = old as any;
+              const newPages = (oldAny?.pages?.map(
+                (page: Record<string, unknown>) => {
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  const pageAny = page as any;
+                  return {
+                    ...page,
+                    items:
+                      pageAny.items?.filter(
+                        (item: T) => item.id !== itemIdToRemove,
+                      ) || [],
+                  };
+                },
+              ) || []) as unknown[];
+              return { ...old, pages: newPages };
+            },
+          );
         } else if (Array.isArray(prevData)) {
           // Regular query returning array
           queryClient.setQueryData(
             queryKey,
-            (old: T[]) =>
+            (old: T[] | undefined) =>
               old?.filter((item) => item.id !== itemIdToRemove) || [],
           );
         } else if (
           "data" in prevData &&
-          Array.isArray((prevData as any).data)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          Array.isArray((prevData as Record<string, unknown> as any)?.data)
         ) {
           // Query object with data array
-          queryClient.setQueryData(queryKey, (old: any) => ({
-            ...old,
-            data:
-              old?.data?.filter((item: T) => item.id !== itemIdToRemove) || [],
-          }));
+
+          queryClient.setQueryData(
+            queryKey,
+            (old: Record<string, unknown> | undefined) => ({
+              ...old,
+              data:
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                (old as any)?.data?.filter(
+                  (item: T) => item.id !== itemIdToRemove,
+                ) || [],
+            }),
+          );
         }
       }
       return { prevData };
     },
-    onError: (_err, _vars, ctx: any) => {
-      if (ctx?.prevData) {
-        queryClient.setQueryData(queryKey, ctx.prevData);
+    onError: (_err, _vars, onMutateResult) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const result = onMutateResult as any;
+      if (result?.prevData) {
+        queryClient.setQueryData(queryKey, result.prevData);
       }
     },
     onSettled: () => {

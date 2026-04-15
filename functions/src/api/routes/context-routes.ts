@@ -25,8 +25,11 @@ const CreateContextSchema = z.object({
 });
 
 const AddContextDocumentSchema = z.object({
-  name: z.string().trim().min(1, "name is required"),
-  metadata: z.record(z.unknown()).optional().nullable(),
+  role: z
+    .enum(["system", "user", "assistant"])
+    .describe("Role of the document"),
+  parts: z.array(z.unknown()).describe("Content parts of the document"),
+  metadata: z.unknown().optional().nullable().describe("Optional metadata"),
 });
 
 const ContextIdParamSchema = z.object({
@@ -70,7 +73,11 @@ router.post(
     const params = await validateRequestParams(ContextIdParamSchema, req, res);
     if (!params) return;
 
-    const parsed = await validateRequestBody(AddContextDocumentSchema, req, res);
+    const parsed = await validateRequestBody(
+      AddContextDocumentSchema,
+      req,
+      res,
+    );
     if (!parsed) return;
 
     try {
@@ -78,8 +85,9 @@ router.post(
         orgId,
         params.id,
         apiKeyId,
-        parsed.name,
-        parsed.metadata || undefined,
+        parsed.role,
+        parsed.parts,
+        parsed.metadata,
       );
       res.status(201).json({ document });
     } catch (err) {
@@ -104,10 +112,7 @@ router.get(
     if (!params) return;
 
     try {
-      const documents = await getContextDocuments(
-        orgId,
-        params.id,
-      );
+      const documents = await getContextDocuments(orgId, params.id);
       res.json({ documents });
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : String(err);
@@ -146,27 +151,24 @@ router.delete(
 );
 
 // DELETE /api/v1/context/:id — delete a context and all its data
-router.delete(
-  "/:id",
-  async (req: Request, res: Response): Promise<void> => {
-    const { orgId, apiKeyId } = req as AuthenticatedRequest;
+router.delete("/:id", async (req: Request, res: Response): Promise<void> => {
+  const { orgId, apiKeyId } = req as AuthenticatedRequest;
 
-    const params = await validateRequestParams(ContextIdParamSchema, req, res);
-    if (!params) return;
+  const params = await validateRequestParams(ContextIdParamSchema, req, res);
+  if (!params) return;
 
-    try {
-      await deleteContext(orgId, params.id, apiKeyId);
-      res.json({ deleted: true });
-    } catch (err) {
-      const errMsg = err instanceof Error ? err.message : String(err);
-      await logApiKeyUsageFailure(orgId, apiKeyId, {
-        action: "delete_context",
-        contextId: params.id,
-        error: errMsg,
-      });
-      sendErrorResponse(err, res, 500, "Failed to delete context");
-    }
-  },
-);
+  try {
+    await deleteContext(orgId, params.id, apiKeyId);
+    res.json({ deleted: true });
+  } catch (err) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    await logApiKeyUsageFailure(orgId, apiKeyId, {
+      action: "delete_context",
+      contextId: params.id,
+      error: errMsg,
+    });
+    sendErrorResponse(err, res, 500, "Failed to delete context");
+  }
+});
 
 export { router as contextRouter };

@@ -18,20 +18,24 @@ The User & Organization Management module provides organization admins with tool
 ### Core Concepts
 
 **Organization Membership** (`orgMemberships` subcollection)
+
 - Links users to organizations with a role (`admin` or `member`)
 - Soft-delete via `deletedAt` timestamp (user removed but data recoverable)
 - Tracked in `organizations/{orgId}/memberships/{userId}`
 
 **Two-Phase Deletion**
+
 1. **Immediate (< 2 sec)**: Set `deletedAt` on membership, revoke API keys, mark stores for delete
 2. **Delayed (after grace period)**: Cloud Function hard-deletes all org-scoped data
 
 **Multi-Org Pattern**
+
 - User's `profile.orgId` = primary org (for login landing page)
 - User's memberships tracked in `organizations/{orgId}/memberships/{userId}` (can belong to multiple orgs)
 - Switching org changes `currentOrgId` in session state (does NOT change `profile.orgId`)
 
 **Audit & Compliance**
+
 - All user management actions logged to `organizations/{orgId}/auditLogs/{logId}`
 - Audit entries NEVER hard-deleted (archived after 1 year for compliance)
 - Supports queries by event type, actor, affected user, and date range
@@ -86,17 +90,19 @@ functions/src/
 
 1. **Review Firestore schema** in [data-model.md](data-model.md) (Collections, Fields, Indexes sections)
 2. **Create Firestore collections** via Firebase Console or Firestore CLI:
+
    ```bash
    # Add new fields to existing organizations collection:
    # - memberCount: number
    # - adminCount: number
    # - gracePeriodDays: number (default 30)
    # - notificationsEnabled: boolean (default true)
-   
+
    # Create new subcollection: organizations/{orgId}/memberships/{userId}
    # Create new collection: deletionTasks
    # Create new subcollection: organizations/{orgId}/auditLogs
    ```
+
 3. **Create required Firestore indexes** (described in data-model.md; Firebase will prompt on first query if missing)
 4. **Run backfill migration** (see Task G6-004 in tasks.md) to populate existing memberships from org owners
 
@@ -109,18 +115,19 @@ functions/src/
    - `user-org-context.model.ts` → `UserOrgContext`
 
 2. **Create Zod schemas** for validation:
+
    ```typescript
    // src/data/organizations/models/schemas.ts
-   import { z } from 'zod';
-   
+   import { z } from "zod";
+
    export const OrgMembershipSchema = z.object({
      id: z.string(),
      orgId: z.string(),
-     role: z.enum(['admin', 'member']),
+     role: z.enum(["admin", "member"]),
      joinedAt: z.date(),
      deletedAt: z.date().nullable(),
    });
-   
+
    export const RemoveUserRequestSchema = z.object({
      orgId: z.string(),
      userId: z.string(),
@@ -150,79 +157,83 @@ functions/src/
    export async function removeUserFromOrg(
      orgId: string,
      userId: string,
-     options?: { reason?: string }
+     options?: { reason?: string },
    ): Promise<RemoveUserResponse> {
      const caller = await getCurrentUser();
-     
+
      // Validate preconditions
-     if (!isOrgAdmin(orgId, caller.id)) throw new Error('FORBIDDEN');
-     
+     if (!isOrgAdmin(orgId, caller.id)) throw new Error("FORBIDDEN");
+
      // Get user & org data
      const membership = await getOrgMembership(orgId, userId);
      const org = await getOrganization(orgId);
-     
+
      // Validate: not removing self, not removing last admin
-     if (caller.id === userId) throw new Error('CANNOT_REMOVE_SELF');
-     if (membership.role === 'admin' && org.adminCount === 1) {
-       throw new Error('CANNOT_REMOVE_LAST_ADMIN');
+     if (caller.id === userId) throw new Error("CANNOT_REMOVE_SELF");
+     if (membership.role === "admin" && org.adminCount === 1) {
+       throw new Error("CANNOT_REMOVE_LAST_ADMIN");
      }
-     
+
      // Begin transaction
      const deleteResult = await adminFirestore.runTransaction(async (tx) => {
        // 1. Soft-delete membership
        tx.update(
          adminFirestore.doc(`organizations/${orgId}/memberships/${userId}`),
-         { deletedAt: FieldValue.serverTimestamp() }
+         { deletedAt: FieldValue.serverTimestamp() },
        );
-       
+
        // 2. Revoke API keys
        const keys = await adminFirestore
          .collection(`organizations/${orgId}/apiKeys`)
-         .where('createdBy', '==', userId)
+         .where("createdBy", "==", userId)
          .get();
-       keys.docs.forEach(doc => {
+       keys.docs.forEach((doc) => {
          tx.update(doc.ref, {
            isRevoked: true,
            revokedAt: FieldValue.serverTimestamp(),
          });
        });
-       
+
        // 3. Soft-delete stores
        const stores = await adminFirestore
          .collection(`organizations/${orgId}/stores`)
-         .where('createdBy', '==', userId)
+         .where("createdBy", "==", userId)
          .get();
-       stores.docs.forEach(doc => {
+       stores.docs.forEach((doc) => {
          tx.update(doc.ref, { deletedAt: FieldValue.serverTimestamp() });
        });
-       
+
        // 4. Update org counts
        tx.update(adminFirestore.doc(`organizations/${orgId}`), {
          memberCount: FieldValue.increment(-1),
-         adminCount: membership.role === 'admin' ? FieldValue.increment(-1) : 0,
+         adminCount: membership.role === "admin" ? FieldValue.increment(-1) : 0,
          updatedAt: FieldValue.serverTimestamp(),
        });
      });
-     
+
      // 5. Create deletion task (outside transaction for clarity)
-     const taskId = await createDeletionTask(orgId, userId, org.gracePeriodDays);
-     
+     const taskId = await createDeletionTask(
+       orgId,
+       userId,
+       org.gracePeriodDays,
+     );
+
      // 6. Invalidate sessions
      await invalidateUserSessions(userId, orgId);
-     
+
      // 7. Send offboarding email (async)
-     queueNotificationEmail('offboarding', userId, orgId, options?.reason);
-     
+     queueNotificationEmail("offboarding", userId, orgId, options?.reason);
+
      // 8. Create audit log
      await createAuditLogEntry(orgId, {
-       eventType: 'USER_REMOVED',
+       eventType: "USER_REMOVED",
        actorId: caller.id,
        affectedUserId: userId,
        action: `Removed user from organization`,
-       outcome: 'success',
+       outcome: "success",
      });
-     
-     return { success: true, message: 'User removed', deletionTaskId: taskId };
+
+     return { success: true, message: "User removed", deletionTaskId: taskId };
    }
    ```
 
@@ -262,38 +273,42 @@ functions/src/
 ### Phase 5: Cloud Functions & Background Jobs (2 days)
 
 1. **Create scheduled deletion Cloud Function** (`functions/src/workflows/retry-org-user-deletion.ts`):
+
    ```typescript
-   import { onSchedule } from 'firebase-functions/v2/scheduler';
-   
+   import { onSchedule } from "firebase-functions/v2/scheduler";
+
    export const retryOrgUserDeletion = onSchedule(
-     { schedule: '0 2,14 * * *' }, // 2 AM and 2 PM UTC, daily
+     { schedule: "0 2,14 * * *" }, // 2 AM and 2 PM UTC, daily
      async (context) => {
        // Query deletion tasks due for hard deletion
        const tasks = await adminFirestore
-         .collection('deletionTasks')
-         .where('status', '==', 'pending')
-         .where('scheduledDeleteAt', '<=', new Date())
+         .collection("deletionTasks")
+         .where("status", "==", "pending")
+         .where("scheduledDeleteAt", "<=", new Date())
          .get();
-       
+
        for (const taskDoc of tasks.docs) {
          const task = taskDoc.data() as DeletionTask;
-         
+
          try {
            // 1. Update status to in_progress
-           await taskDoc.ref.update({ status: 'in_progress' });
-           
+           await taskDoc.ref.update({ status: "in_progress" });
+
            // 2. Hard-delete Firestore documents
-           const deletedCounts = await hardDeleteUserOrgData(task.userId, task.orgId);
-           
+           const deletedCounts = await hardDeleteUserOrgData(
+             task.userId,
+             task.orgId,
+           );
+
            // 3. Hard-delete Cloud Storage files
            await hardDeleteUserCloudStorageFiles(task.userId, task.orgId);
-           
+
            // 4. Delete Gemini File Search indexes
            await deleteGeminiFileSearchIndexes(task.userId, task.orgId);
-           
+
            // 5. Mark task as completed
            await taskDoc.ref.update({
-             status: 'completed',
+             status: "completed",
              completedAt: FieldValue.serverTimestamp(),
              deletedEntityCount: deletedCounts,
            });
@@ -301,18 +316,18 @@ functions/src/
            // Retry logic with exponential backoff
            task.retryCount++;
            const delayMs = Math.pow(2, task.retryCount) * 60 * 1000; // 1, 5, 30 min
-           
+
            if (task.retryCount >= task.maxRetries) {
              // All retries exhausted
              await taskDoc.ref.update({
-               status: 'failed',
+               status: "failed",
                error: error.message,
              });
              // Alert admin via dashboard or email
            } else {
              // Retry later
              await taskDoc.ref.update({
-               status: 'pending',
+               status: "pending",
                retryCount: task.retryCount,
                error: error.message,
                updatedAt: FieldValue.serverTimestamp(),
@@ -320,7 +335,7 @@ functions/src/
            }
          }
        }
-     }
+     },
    );
    ```
 
@@ -357,34 +372,34 @@ functions/src/
 ```typescript
 export async function addUserToOrg(
   orgId: string,
-  userId: string
+  userId: string,
 ): Promise<void> {
   const caller = await getCurrentUser();
-  
-  if (!isOrgAdmin(orgId, caller.id)) throw new Error('FORBIDDEN');
-  
+
+  if (!isOrgAdmin(orgId, caller.id)) throw new Error("FORBIDDEN");
+
   await adminFirestore.doc(`organizations/${orgId}/memberships/${userId}`).set({
     orgId,
     userId,
-    role: 'member',
+    role: "member",
     joinedAt: FieldValue.serverTimestamp(),
     lastActiveAt: null,
     deletedAt: null,
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
   });
-  
+
   // Update org memberCount
   await adminFirestore.doc(`organizations/${orgId}`).update({
     memberCount: FieldValue.increment(1),
   });
-  
+
   // Create audit log
   await createAuditLogEntry(orgId, {
-    eventType: 'USER_ADDED',
+    eventType: "USER_ADDED",
     actorId: caller.id,
     affectedUserId: userId,
-    outcome: 'success',
+    outcome: "success",
   });
 }
 ```
@@ -395,20 +410,22 @@ export async function addUserToOrg(
 // In middleware or request handler
 export async function updateUserLastActive(
   userId: string,
-  orgId: string
+  orgId: string,
 ): Promise<void> {
   // Throttle updates to avoid excessive writes (update max once per 5 minutes)
   const lastUpdateKey = `user_active:${userId}:${orgId}`;
   const lastUpdate = await getFromCache(lastUpdateKey);
-  
+
   if (lastUpdate && Date.now() - lastUpdate < 5 * 60 * 1000) {
     return; // Skip update
   }
-  
-  await adminFirestore.doc(`organizations/${orgId}/memberships/${userId}`).update({
-    lastActiveAt: FieldValue.serverTimestamp(),
-  });
-  
+
+  await adminFirestore
+    .doc(`organizations/${orgId}/memberships/${userId}`)
+    .update({
+      lastActiveAt: FieldValue.serverTimestamp(),
+    });
+
   await setInCache(lastUpdateKey, Date.now(), 5 * 60); // 5 min TTL
 }
 ```
@@ -418,12 +435,12 @@ export async function updateUserLastActive(
 ```typescript
 export async function userBelongsToOrg(
   userId: string,
-  orgId: string
+  orgId: string,
 ): Promise<boolean> {
   const membership = await adminFirestore
     .doc(`organizations/${orgId}/memberships/${userId}`)
     .get();
-  
+
   return membership.exists && membership.data()?.deletedAt == null;
 }
 ```
@@ -433,18 +450,22 @@ export async function userBelongsToOrg(
 ## Debugging & Troubleshooting
 
 ### Issue: "CANNOT_REMOVE_LAST_ADMIN"
+
 **Cause**: Attempting to remove the only admin from an organization.  
 **Solution**: Promote another member to admin first, then remove the original admin.
 
 ### Issue: Deletion task stuck in "pending" status
+
 **Cause**: Cloud Function failed to process task (Cloud Storage delete failed, timeout, etc.).  
 **Solution**: Check Cloud Function logs; if transient, the job will retry. If persistent, manually mark task as `cancelled` and investigate underlying issue.
 
 ### Issue: Removed user can still access stores
+
 **Cause**: Sessions not invalidated in time; user has cached auth token.  
 **Solution**: Invalidate sessions more aggressively (immediate token revocation broadcast) or shorten token TTL.
 
 ### Issue: User list query returns "Indexes required" error
+
 **Cause**: Composite indexes not created in Firestore.  
 **Solution**: Check Firebase Console → Firestore → Indexes; create any missing indexes (Firebase will provide links).
 

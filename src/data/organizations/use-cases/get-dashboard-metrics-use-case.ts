@@ -11,6 +11,9 @@ import { AuditLogRepository } from "@/data/audit/repositories/audit-log-reposito
 import { ApiKeyRepository } from "@/data/organizations/repositories/api-key-repository";
 import { StoreRepository } from "@/data/stores/repositories/store-repository";
 import { MemoryRepository } from "@/data/memories/repositories/memory-repository";
+import { FileRepository } from "@/data/files/repositories/file-repository";
+import { ContextRepository } from "@/data/contexts/repositories/context-repository";
+import { OrgMembershipRepository } from "@/data/organizations/repositories/org-membership-repository";
 
 export type {
   DashboardMetrics,
@@ -35,8 +38,10 @@ export class GetDashboardMetricsUseCase extends BaseUseCase<
     const apiKeyRepo = new ApiKeyRepository(orgId);
     const auditRepo = new AuditLogRepository();
     const storeRepo = new StoreRepository(orgId);
-
     const memoryRepo = new MemoryRepository(orgId);
+    const fileRepo = new FileRepository(orgId);
+    const contextRepo = new ContextRepository(orgId);
+    const membershipRepo = new OrgMembershipRepository(orgId);
 
     const [
       activeKeysResult,
@@ -44,12 +49,24 @@ export class GetDashboardMetricsUseCase extends BaseUseCase<
       errorsResult,
       storesCountResult,
       memoriesCountResult,
+      filesCountResult,
+      contextsCountResult,
+      membersCountResult,
     ] = await Promise.all([
       apiKeyRepo.countActive(),
       auditRepo.findByEventType("API_KEY_USAGE_SUCCESS", since, orgId),
       auditRepo.findByEventType("API_KEY_USAGE_FAILURE", since, orgId),
       storeRepo.countByOrg(),
       memoryRepo.countByOrg(),
+      (async () => {
+        const count = await fileRepo.countByOrg();
+        return ok(count);
+      })(),
+      contextRepo.countByOrg(),
+      (async () => {
+        const count = await membershipRepo.countActive();
+        return ok(count);
+      })(),
     ]);
 
     if (!activeKeysResult.ok) {
@@ -67,11 +84,22 @@ export class GetDashboardMetricsUseCase extends BaseUseCase<
     if (!memoriesCountResult.ok) {
       return err(appError("INTERNAL_ERROR", "Failed to count memories"));
     }
+    if (!filesCountResult.ok) {
+      return err(appError("INTERNAL_ERROR", "Failed to count files"));
+    }
+    if (!contextsCountResult.ok) {
+      return err(appError("INTERNAL_ERROR", "Failed to count contexts"));
+    }
+    if (!membersCountResult.ok) {
+      return err(appError("INTERNAL_ERROR", "Failed to count members"));
+    }
 
     return ok({
       totalActiveKeys: activeKeysResult.value,
       totalStores: storesCountResult.value,
-      totalMemories: memoriesCountResult.value,
+      totalFiles: filesCountResult.value,
+      totalContexts: contextsCountResult.value,
+      totalMembers: membersCountResult.value,
       keyActivity: bucketByDay(activityResult.value.map((e) => e.timestamp)),
       errors: bucketByDay(errorsResult.value.map((e) => e.timestamp)),
     });

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useGoogleReCaptcha } from 'react-google-recaptcha-v3'
 import { Button, Card, TextField, Label, Input, FieldError, Spinner } from '@heroui/react'
@@ -14,6 +14,18 @@ function LoginForm() {
     const [sent, setSent] = useState(false)
     const [serverError, setServerError] = useState('')
     const [isPending, startTransition] = useTransition()
+
+    useEffect(() => {
+        if (executeRecaptcha) {
+            executeRecaptcha('send_magic_link').then(token => {
+                // We don't actually need the token here, this is just to pre-load the reCAPTCHA script and get an initial token.
+                // The real token will be fetched on form submit.
+                console.log('reCAPTCHA initialized, token:', token)
+            }).catch(err => {
+                console.error('Error initializing reCAPTCHA:', err)
+            })
+        }
+    }, [executeRecaptcha])
 
     function validate(): boolean {
         if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {

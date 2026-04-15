@@ -6,7 +6,9 @@ import type { AppContext } from '@/lib/middleware/with-context'
 const EMPTY_METRICS = {
     totalActiveKeys: 0,
     totalStores: 0,
-    totalMemories: 0,
+    totalFiles: 0,
+    totalContexts: 0,
+    totalMembers: 0,
     keyActivity: [],
     errors: [],
 }
@@ -14,9 +16,19 @@ const EMPTY_METRICS = {
 export async function DashboardServer() {
     const { orgId, user, uid } = await getServerContext()
 
+    // If orgId is not set (during onboarding before org creation), return empty metrics
+    if (!orgId) {
+        return (
+            <DashboardClient
+                displayName={(user?.displayName as string) ?? ''}
+                metrics={EMPTY_METRICS}
+            />
+        )
+    }
+
     const ctx: AppContext = {
         uid,
-        orgId: orgId ?? '',
+        orgId,
         email: (user?.email as string) ?? '',
     }
     const metricsResult = await getDashboardMetricsQuery(ctx)

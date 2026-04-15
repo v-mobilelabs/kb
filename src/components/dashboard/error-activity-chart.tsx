@@ -70,7 +70,7 @@ export function ErrorActivityChart({ data }: Readonly<ErrorActivityChartProps>) 
             <div className="px-3 pt-3 pb-0">
                 <p className="text-xs text-foreground/60 uppercase tracking-wide">Errors (30d)</p>
             </div>
-            <div className="flex-1 w-full overflow-hidden" style={{ minHeight: 0 }}>
+            <div className="flex-1 w-full overflow-hidden" style={{ minHeight: 0, height: '100%' }}>
                 <ResponsiveContainer width="100%" height="100%">
                     <BarChart
                         data={chartData}

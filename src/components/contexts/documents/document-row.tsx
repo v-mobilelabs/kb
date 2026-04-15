@@ -1,18 +1,19 @@
 "use client";
 
-import { Button, TableRow, TableCell } from "@heroui/react";
+import { Button, TableRow, TableCell, Badge } from "@heroui/react";
 import type { ContextDocument } from "@/data/contexts/models/context-document.model";
 import { useDocumentActions } from "./document-actions-provider";
 
-function formatDate(ts: number): string {
-    return new Intl.DateTimeFormat("en", { dateStyle: "short" }).format(new Date(ts));
-}
-
 export function DocumentRow({
     document,
-    contextId,
+
 }: Readonly<{ document: ContextDocument; contextId: string }>) {
     const { openEdit, openDelete } = useDocumentActions();
+    const roleColors: Record<string, string> = {
+        'user': 'primary',
+        'system': 'secondary',
+        'assistant': 'success',
+    };
     return (
         <TableRow id={document.id}>
             <TableCell>
@@ -21,12 +22,9 @@ export function DocumentRow({
                 </span>
             </TableCell>
             <TableCell>
-                <span className="text-sm">{document.name ?? <span className="text-foreground/40 italic">unnamed</span>}</span>
-            </TableCell>
-            <TableCell>
-                <span className="text-xs text-foreground/50 whitespace-nowrap">
-                    {formatDate(document.createdAt)}
-                </span>
+                <Badge color={roleColors[document.role] as any} className="capitalize">
+                    {document.role}
+                </Badge>
             </TableCell>
             <TableCell>
                 <div className="flex gap-1 justify-end">

@@ -38,7 +38,7 @@ export function ContextCreateForm({ orgId, onClose }: Readonly<Props>) {
         name: name.trim(),
         windowSize: windowSize ? Number.parseInt(windowSize, 10) : null,
       }),
-    onSuccess: (result) => {
+    onSuccess: (result: any) => {
       if (!result.ok) {
         setFormError(result.error.message);
         return;

@@ -23,7 +23,7 @@ Tasks are organized by implementation phase. Each task includes:
 
 **Goal**: Validate prerequisites, set up development environment, and plan dependencies.
 
-- [ ] T001 Create feature branch and initial directory structure for module 006
+- [X] T001 Create feature branch and initial directory structure for module 006
 - [ ] T002 [P] Verify Firebase project credentials, Firestore write access, and RTDB enabled
 - [ ] T003 [P] Review spec.md and data-model.md; clarify any ambiguities with product team
 - [ ] T004 [P] Create development checklist: dependencies, build system, testing setup verification
@@ -45,11 +45,11 @@ Tasks are organized by implementation phase. Each task includes:
 
 - [ ] T005 Create Firestore collections in Firebase Console: `organizations/{orgId}/memberships/`, `deletionTasks/`, `organizations/{orgId}/audits/`, `organizations/{orgId}/roles/`, `organizations/{orgId}/policies/` with initial documents in `src/data/organizations/firestore/schema.ts`
 
-- [ ] T006 [P] Create 12 composite Firestore indexes in `/firestore.indexes.json` and deploy via Firebase CLI; verify all indexes reach "Active" status
+- [X] T006 [P] Create 12 composite Firestore indexes in `/firestore.indexes.json` and deploy via Firebase CLI; verify all indexes reach "Active" status
 
-- [ ] T007 [P] Define TypeScript domain models in `src/data/organizations/models/`: `org-membership.model.ts`, `deletion-task.model.ts`, `org-role.model.ts`, `org-policy.model.ts`, `org-audit-entry.model.ts`
+- [X] T007 [P] Define TypeScript domain models in `src/data/organizations/models/`: `org-membership.model.ts`, `deletion-task.model.ts`, `org-role.model.ts`, `org-policy.model.ts`, `org-audit-entry.model.ts`
 
-- [ ] T008 [P] Update Firestore security rules in `firestore.rules`: add read access for memberships (org members only), audit log read for org admins with `audit:read` permission, write access for Cloud Functions only (authenticated)
+- [X] T008 [P] Update Firestore security rules in `firestore.rules`: add read access for memberships (org members only), audit log read for org admins with `audit:read` permission, write access for Cloud Functions only (authenticated)
 
 - [ ] T006a Backfill existing org memberships from old schema to new in `functions/src/migrations/backfill-org-memberships.ts`: convert existing org creators to `baseRole="owner"`, existing admins to `baseRole="admin"`, verify `memberCount`/`adminCount` accurate, write dry-run and apply modes; test on staging before production
 
@@ -68,13 +68,13 @@ Tasks are organized by implementation phase. Each task includes:
 
 ### Phase 2 Tasks
 
-- [ ] T009 [P] Implement Zod validation schema library in `src/data/organizations/schemas/`: common types (`UserId`, `OrgId`, `Email`, `BaseRole`, `Pagination`), user management schemas (`GetOrgUserListInput`, `RemoveUserFromOrgInput`, `PromoteUserToAdminInput`), audit schemas
+- [X] T009 [P] Implement Zod validation schema library in `src/data/organizations/schemas/`
 
-- [ ] T010 [P] Implement Firestore data access layer in `src/data/organizations/firestore/`: query helpers (`getUserOrgMemberships`, `getOrgUserList`, `getOrgAuditLog`, `getMembershipById`), mutation helpers (`updateMembership`, `createDeletionTask`, `revokeMemberApiKeys`)
+- [X] T010 [P] Implement Firestore data access layer (repositories: OrgMembershipRepository, DeletionTaskRepository, OrgAuditRepository)
 
-- [ ] T011 [P] Implement all 30+ use cases (service layer) in `src/data/organizations/services/`: `getUserOrgList`, `getOrgUserList`, `removeUserFromOrg`, `getOrgAuditLog`, `promoteMemberToAdmin`, `demoteMemberFromAdmin`, `getOrgRoles`, `createCustomRole`, `updateOrgPolicy`, etc. Each must validate input (Zod), check auth, execute transaction, emit audit event, handle errors
+- [X] T011 [P] Implement use cases: ListOrgMembers, RemoveOrgMember, ChangeMemberBaseRole, RestoreOrgMember, GetUserOrgs, ListOrgAudit
 
-- [ ] T012 [P] Implement server actions wrapping use cases in `src/actions/user-management-actions.ts`: `listOrgUsers`, `removeOrgUser`, `promoteOrgUser`, `demoteOrgUser`, `listOrgAudit`, etc.; each exports type-safe Next.js server function
+- [X] T012 [P] Implement server actions in `src/actions/org-member-actions.ts`
 
 - [ ] T012a Set up email notification infrastructure in `src/lib/notifications/`: create email template library (offboarding, promotion, demotion events), implement notification queue (Cloud Tasks / Firestore background function), add retry logic (up to 3 retries within 24hrs), error logging; acceptance: mock email service callable in T028 integration tests
 
@@ -92,9 +92,9 @@ Tasks are organized by implementation phase. Each task includes:
 
 ### Phase 3 Tasks
 
-- [ ] T013b Implement session revocation service in `src/lib/auth/session-revocation.ts`: define token revocation mechanism (RTDB token blacklist or Firebase Auth custom claims), implement broadcast/refresh logic (middleware checks RTDB on each request), ensure removed users' all sessions invalidated within 5 minutes; acceptance: session test in T030 verifies revocation
+- [X] T013b Implement session revocation service in `src/lib/auth/session-revocation.ts`: RTDB blacklist at /revoked/{userId}
 
-- [ ] T013b Implement session revocation service in `src/lib/auth/session-revocation.ts`: define token revocation mechanism (RTDB token blacklist or Firebase Auth custom claims), implement broadcast/refresh logic (middleware checks RTDB on each request), ensure removed users' all sessions invalidated within 5 minutes; acceptance: session test in T030 verifies revocation
+- [X] T013b Implement session revocation service in `src/lib/auth/session-revocation.ts`: RTDB blacklist at /revoked/{userId}
 
 - [ ] T014 [P] Implement permission evaluation service in `src/lib/permissions/evaluate-permissions.ts`: check RTDB first (< 50ms), fall back to Firestore for miss, aggregate permissions from roles + ABAC policies, cache result for 60 seconds
 

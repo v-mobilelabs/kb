@@ -26,11 +26,9 @@ interface ContextData {
 interface ContextDocument {
   id: string;
   contextId: string;
-  name: string;
-  metadata?: Record<string, unknown>;
-  createdBy: string;
-  createdAt: number;
-  updatedAt: number;
+  role: "system" | "user" | "assistant";
+  metadata?: unknown;
+  parts: unknown[];
 }
 
 interface ContextDocumentsResult {
@@ -98,10 +96,13 @@ export async function getContextDocuments(
 
     let items: ContextDocument[] = [];
     snapshot.forEach((child) => {
+      const data = child.val();
       items.push({
         id: child.key as string,
         contextId,
-        ...child.val(),
+        role: data.role || "user",
+        parts: data.parts || [],
+        metadata: data.metadata,
       });
     });
 
@@ -113,7 +114,7 @@ export async function getContextDocuments(
     if (hasNext) items = items.slice(0, pageSize);
 
     const lastItem = items.at(-1);
-    const nextCursor = hasNext && lastItem ? String(lastItem.createdAt) : null;
+    const nextCursor = hasNext && lastItem ? String(lastItem.id) : null;
 
     return {
       items,
@@ -133,23 +134,24 @@ export async function addContextDocument(
   orgId: string,
   contextId: string,
   apiKeyId: string,
-  name: string,
-  metadata?: Record<string, unknown>,
+  role: "system" | "user" | "assistant",
+  parts: unknown[],
+  metadata?: unknown,
 ): Promise<ContextDocument> {
   try {
     const db = getAdminRtdb();
-    const ref = db.ref(
-      `organizations/${orgId}/contexts/${contextId}/documents`,
-    ).push();
+    const ref = db
+      .ref(`organizations/${orgId}/contexts/${contextId}/documents`)
+      .push();
 
-    const now = Date.now();
     const documentData: Omit<ContextDocument, "id" | "contextId"> = {
-      name: name.trim(),
-      metadata: metadata || {},
-      createdBy: apiKeyId,
-      createdAt: now,
-      updatedAt: now,
+      role,
+      parts,
     };
+
+    if (metadata) {
+      documentData.metadata = metadata;
+    }
 
     await ref.set(documentData);
 
@@ -181,7 +183,9 @@ export async function deleteContextDocuments(
 ): Promise<{ deleted: boolean }> {
   try {
     const db = getAdminRtdb();
-    const ref = db.ref(`organizations/${orgId}/contexts/${contextId}/documents`);
+    const ref = db.ref(
+      `organizations/${orgId}/contexts/${contextId}/documents`,
+    );
 
     await ref.remove();
 

@@ -32,7 +32,11 @@ async function parseUploadedFile(req: Request): Promise<{
     }
 
     const bb = Busboy({ headers: req.headers });
-    let result: { buffer: Buffer; originalname: string; mimetype: string } | null = null;
+    let result: {
+      buffer: Buffer;
+      originalname: string;
+      mimetype: string;
+    } | null = null;
 
     bb.on("file", (_fieldname, file, info) => {
       const chunks: Buffer[] = [];
@@ -72,7 +76,8 @@ router.post("/upload", async (req: Request, res: Response): Promise<void> => {
     if (!uploadedFile) {
       res.status(400).json({
         error: "MISSING_FILE",
-        message: "No file found in multipart form. Ensure the field name is \"file\".",
+        message:
+          "No file found in multipart form. Ensure the field name is \"file\".",
       });
       return;
     }

@@ -1,4 +1,3 @@
-/* eslint-disable quote-props */
 export const openApiSpec = {
   openapi: "3.1.0",
   info: {
@@ -23,6 +22,12 @@ export const openApiSpec = {
         name: "x-api-key",
         description: "API Key for authentication",
       },
+      userToken: {
+        type: "http",
+        scheme: "bearer",
+        bearerFormat: "JWT",
+        description: "Firebase ID token for user authentication",
+      },
     },
     schemas: {
       Error: {
@@ -34,6 +39,16 @@ export const openApiSpec = {
           },
         },
         required: ["error"],
+      },
+      User: {
+        type: "object",
+        properties: {
+          uid: { type: "string" },
+          email: { type: "string" },
+          displayName: { type: ["string", "null"] },
+          photoURL: { type: ["string", "null"] },
+          createdAt: { type: "string", format: "date-time" },
+        },
       },
       Context: {
         type: "object",
@@ -52,14 +67,20 @@ export const openApiSpec = {
       ContextDocument: {
         type: "object",
         properties: {
-          id: { type: "string" },
-          contextId: { type: "string" },
-          name: { type: "string" },
-          metadata: { type: "object" },
-          createdBy: { type: "string" },
-          createdAt: { type: "integer" },
-          updatedAt: { type: "integer" },
+          id: { type: "string", description: "Unique identifier" },
+          role: {
+            type: "string",
+            enum: ["system", "user", "assistant"],
+            description: "Role of the document",
+          },
+          metadata: { description: "Optional metadata" },
+          parts: {
+            type: "array",
+            items: {},
+            description: "Content parts of the document",
+          },
         },
+        required: ["id", "role", "parts"],
       },
       Store: {
         type: "object",
@@ -151,17 +172,29 @@ export const openApiSpec = {
       FileDownloadResponse: {
         type: "object",
         properties: {
-          url: { type: "string", description: "Signed download URL (15-minute expiry)" },
-          expiresIn: { type: "integer", description: "Seconds until URL expires" },
+          url: {
+            type: "string",
+            description: "Signed download URL (15-minute expiry)",
+          },
+          expiresIn: {
+            type: "integer",
+            description: "Seconds until URL expires",
+          },
         },
       },
       FileThumbnailResponse: {
         type: "object",
         properties: {
           url: { type: "string", description: "Signed URL for image files" },
-          data: { type: "string", description: "Base64 data URL for non-image files" },
+          data: {
+            type: "string",
+            description: "Base64 data URL for non-image files",
+          },
           contentType: { type: "string", description: "MIME type of the file" },
-          isImage: { type: "boolean", description: "Whether the file is an image" },
+          isImage: {
+            type: "boolean",
+            description: "Whether the file is an image",
+          },
         },
       },
       FileUploadResponse: {
@@ -470,7 +503,10 @@ export const openApiSpec = {
               schema: {
                 type: "object",
                 properties: {
-                  name: { type: "string", description: "Document name (max 100 chars)" },
+                  name: {
+                    type: "string",
+                    description: "Document name (max 100 chars)",
+                  },
                   source: {
                     type: "object",
                     properties: {
@@ -479,7 +515,10 @@ export const openApiSpec = {
                     },
                     required: ["id", "collection"],
                   },
-                  data: { type: "object", description: "Arbitrary JSON data payload" },
+                  data: {
+                    type: "object",
+                    description: "Arbitrary JSON data payload",
+                  },
                   keywords: {
                     type: "array",
                     items: { type: "string" },
@@ -547,7 +586,10 @@ export const openApiSpec = {
                       collection: { type: "string" },
                     },
                   },
-                  data: { type: "object", description: "Updated JSON data (triggers re-enrichment)" },
+                  data: {
+                    type: "object",
+                    description: "Updated JSON data (triggers re-enrichment)",
+                  },
                   keywords: { type: "array", items: { type: "string" } },
                 },
               },
@@ -714,9 +756,18 @@ export const openApiSpec = {
               schema: {
                 type: "object",
                 properties: {
-                  description: { type: "string", description: "Optional description" },
-                  documentCapacity: { type: "integer", description: "Max documents (default 100)" },
-                  condenseThresholdPercent: { type: "integer", description: "Condensation threshold 1-100 (default 50)" },
+                  description: {
+                    type: "string",
+                    description: "Optional description",
+                  },
+                  documentCapacity: {
+                    type: "integer",
+                    description: "Max documents (default 100)",
+                  },
+                  condenseThresholdPercent: {
+                    type: "integer",
+                    description: "Condensation threshold 1-100 (default 50)",
+                  },
                 },
               },
             },
@@ -795,7 +846,10 @@ export const openApiSpec = {
               schema: {
                 type: "object",
                 properties: {
-                  content: { type: "string", description: "Document content (max 50,000 chars)" },
+                  content: {
+                    type: "string",
+                    description: "Document content (max 50,000 chars)",
+                  },
                   title: { type: "string", description: "Optional title hint" },
                 },
                 required: ["content"],
@@ -880,7 +934,10 @@ export const openApiSpec = {
               schema: {
                 type: "object",
                 properties: {
-                  content: { type: "string", description: "Document content (max 50,000 chars)" },
+                  content: {
+                    type: "string",
+                    description: "Document content (max 50,000 chars)",
+                  },
                   title: { type: "string", description: "Optional title hint" },
                 },
                 required: ["content"],
@@ -1026,6 +1083,252 @@ export const openApiSpec = {
           },
           401: { description: "Unauthorized" },
           404: { description: "File not found" },
+          500: { description: "Server error" },
+        },
+      },
+    },
+    "/api/v1/auth/magic-link": {
+      post: {
+        tags: ["Authentication"],
+        summary:
+          "Send magic link to email for organization member authentication",
+        description:
+          "Sends a magic link to the provided email address. Requires reCAPTCHA validation. Organization ID is extracted from the API key.",
+        operationId: "sendMagicLink",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  email: {
+                    type: "string",
+                    format: "email",
+                    description: "User email address",
+                  },
+                  captchaToken: {
+                    type: "string",
+                    description: "Optional reCAPTCHA v3 token",
+                  },
+                },
+                required: ["email"],
+              },
+            },
+          },
+        },
+        security: [{ apiKey: [] }],
+        responses: {
+          200: {
+            description: "Magic link sent successfully",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    success: { type: "boolean" },
+                    message: { type: "string" },
+                  },
+                },
+              },
+            },
+          },
+          400: { description: "Invalid request parameters" },
+          401: { description: "Unauthorized - invalid API key" },
+          403: { description: "reCAPTCHA verification failed" },
+          500: { description: "Server error" },
+        },
+      },
+    },
+    "/api/v1/auth/callback": {
+      post: {
+        tags: ["Authentication"],
+        summary: "Validate magic link and create session",
+        description:
+          "Validates the Firebase ID token from magic link and creates a session for the user. Organization ID is extracted from the API key.",
+        operationId: "authCallback",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  idToken: {
+                    type: "string",
+                    description: "Firebase ID token from magic link flow",
+                  },
+                },
+                required: ["idToken"],
+              },
+            },
+          },
+        },
+        security: [{ apiKey: [] }],
+        responses: {
+          200: {
+            description: "Session created successfully",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    success: { type: "boolean" },
+                    sessionCookie: { type: "string" },
+                    user: {
+                      type: "object",
+                      properties: {
+                        uid: { type: "string" },
+                        email: { type: "string" },
+                        orgId: { type: "string" },
+                        role: {
+                          type: "string",
+                          enum: ["member", "admin", "owner"],
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          400: { description: "Invalid request parameters" },
+          401: {
+            description: "Unauthorized - invalid API key or invalid ID token",
+          },
+          403: { description: "Forbidden - membership removed" },
+          404: { description: "User not a member of this organization" },
+          500: { description: "Server error" },
+        },
+      },
+    },
+    "/api/v1/profile/me": {
+      get: {
+        tags: ["Profile"],
+        summary: "Get user profile",
+        description: "Retrieve the authenticated user's profile information",
+        operationId: "getUserProfile",
+        parameters: [
+          {
+            name: "Authorization",
+            in: "header",
+            required: true,
+            schema: { type: "string" },
+            description: "Bearer token (Firebase ID token)",
+            example: "Bearer eyJhbGciOiJSUzI1NiIsImtpZCI...",
+          },
+        ],
+        security: [{ userToken: [] }],
+        responses: {
+          200: {
+            description: "User profile retrieved",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    success: { type: "boolean" },
+                    user: { $ref: "#/components/schemas/User" },
+                  },
+                },
+              },
+            },
+          },
+          401: { description: "Unauthorized - missing or invalid token" },
+          404: { description: "User profile not found" },
+          500: { description: "Server error" },
+        },
+      },
+      post: {
+        tags: ["Profile"],
+        summary: "Update user profile",
+        description: "Update the authenticated user's profile information",
+        operationId: "updateUserProfile",
+        parameters: [
+          {
+            name: "Authorization",
+            in: "header",
+            required: true,
+            schema: { type: "string" },
+            description: "Bearer token (Firebase ID token)",
+            example: "Bearer eyJhbGciOiJSUzI1NiIsImtpZCI...",
+          },
+        ],
+        security: [{ userToken: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  displayName: {
+                    type: "string",
+                    description: "User's display name",
+                  },
+                  photoURL: {
+                    type: "string",
+                    format: "uri",
+                    description: "User's photo URL",
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: "Profile updated successfully",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    success: { type: "boolean" },
+                    message: { type: "string" },
+                  },
+                },
+              },
+            },
+          },
+          400: { description: "Invalid request parameters" },
+          401: { description: "Unauthorized - missing or invalid token" },
+          500: { description: "Server error" },
+        },
+      },
+      delete: {
+        tags: ["Profile"],
+        summary: "Delete user account",
+        description:
+          "Delete the authenticated user's account and associated organization data. Account deletion is scheduled and will be processed asynchronously.",
+        operationId: "deleteUserAccount",
+        parameters: [
+          {
+            name: "Authorization",
+            in: "header",
+            required: true,
+            schema: { type: "string" },
+            description: "Bearer token (Firebase ID token)",
+            example: "Bearer eyJhbGciOiJSUzI1NiIsImtpZCI...",
+          },
+        ],
+        security: [{ userToken: [] }],
+        responses: {
+          200: {
+            description: "Account scheduled for deletion",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    success: { type: "boolean" },
+                    message: { type: "string" },
+                  },
+                },
+              },
+            },
+          },
+          401: { description: "Unauthorized - missing or invalid token" },
           500: { description: "Server error" },
         },
       },

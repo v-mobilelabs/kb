@@ -20,19 +20,17 @@ export class ContextDocumentRepository {
   async create(
     orgId: string,
     contextId: string,
-    data: Pick<ContextDocument, "name" | "metadata" | "createdBy">,
+    data: Pick<ContextDocument, "role" | "parts" | "metadata"> & {
+      createdBy: string;
+    },
   ): Promise<Result<ContextDocument, AppError>> {
     try {
       const docId = randomUUID();
-      const now = Date.now();
       const doc: ContextDocument = {
         id: docId,
-        contextId,
-        name: data.name,
+        role: data.role,
+        parts: data.parts,
         metadata: data.metadata,
-        createdBy: data.createdBy,
-        createdAt: now,
-        updatedAt: now,
       };
       await this.ref(orgId, contextId).child(docId).set(doc);
       return ok(doc);
@@ -69,10 +67,19 @@ export class ContextDocumentRepository {
       filterId?: string;
     },
   ): Promise<Result<PaginatedDocumentResult, AppError>> {
-    const { sort = "createdAt_desc", cursor, filterId } = options;
+    const { sort = "id_desc", cursor, filterId } = options;
     const pageSize = Math.min(options.limit ?? 25, 100);
 
-    console.log("[ContextDocumentRepository.list] orgId:", orgId, "contextId:", contextId, "sort:", sort, "filterId:", filterId);
+    console.log(
+      "[ContextDocumentRepository.list] orgId:",
+      orgId,
+      "contextId:",
+      contextId,
+      "sort:",
+      sort,
+      "filterId:",
+      filterId,
+    );
 
     try {
       // FR-012: filterId = direct RTDB child read (exact UUID match)
@@ -94,7 +101,7 @@ export class ContextDocumentRepository {
         query = cursor
           ? this.ref(orgId, contextId)
               .orderByChild(sortField)
-              .startAfter(Number(cursor))
+              .startAfter(cursor)
               .limitToFirst(pageSize + 1)
           : this.ref(orgId, contextId)
               .orderByChild(sortField)
@@ -103,7 +110,7 @@ export class ContextDocumentRepository {
         query = cursor
           ? this.ref(orgId, contextId)
               .orderByChild(sortField)
-              .endBefore(Number(cursor))
+              .endBefore(cursor)
               .limitToLast(pageSize + 1)
           : this.ref(orgId, contextId)
               .orderByChild(sortField)
@@ -121,7 +128,11 @@ export class ContextDocumentRepository {
         items.push(child.val() as ContextDocument);
       });
 
-      console.log("[ContextDocumentRepository.list] Found", items.length, "items before pagination");
+      console.log(
+        "[ContextDocumentRepository.list] Found",
+        items.length,
+        "items before pagination",
+      );
 
       if (sortDir === "desc") items = items.reverse();
 
@@ -131,7 +142,7 @@ export class ContextDocumentRepository {
       const lastItem = items.at(-1);
       const nextCursor =
         hasNext && lastItem
-          ? String(lastItem[sortField as "createdAt" | "updatedAt"])
+          ? String(lastItem[sortField as "id" | "role"])
           : null;
 
       return ok({ items, hasNext, nextCursor });
@@ -144,7 +155,7 @@ export class ContextDocumentRepository {
     orgId: string,
     contextId: string,
     docId: string,
-    data: Pick<Partial<ContextDocument>, "name" | "metadata">,
+    data: Pick<Partial<ContextDocument>, "role" | "parts" | "metadata">,
   ): Promise<Result<ContextDocument, AppError>> {
     try {
       const existingResult = await this.findById(orgId, contextId, docId);
@@ -152,12 +163,8 @@ export class ContextDocumentRepository {
 
       const patch: Partial<ContextDocument> = {
         ...data,
-        updatedAt: Date.now(),
         // Explicitly never overwrite immutable fields
         id: undefined,
-        contextId: undefined,
-        createdBy: undefined,
-        createdAt: undefined,
       };
 
       // Remove undefined keys before writing

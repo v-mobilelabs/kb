@@ -2,7 +2,7 @@
   "rules": {
     ".read": false,
     ".write": false,
-    
+
     "contexts": {
       "$contextId": {
         ".read": "root.child('contextAccessControl').child(auth.uid).child($contextId).exists()",
@@ -33,7 +33,7 @@
         }
       }
     },
-    
+
     "contextAccessControl": {
       "$userId": {
         ".read": "auth.uid == $userId",

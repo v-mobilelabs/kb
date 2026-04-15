@@ -205,7 +205,7 @@ export function DocumentListClient({
 
     // ── Delete ────────────────────────────────────────────────────────────
     const deleteMutation = useMutation<
-        any,
+        unknown,
         Error,
         void
     >({
@@ -281,7 +281,7 @@ export function DocumentListClient({
                                     </TableHeader>
                                     <TableBody>
                                         {new Array(5).fill(null).map((_, i) => (
-                                            // eslint-disable-next-line react/no-array-index-key
+
                                             <tr key={i}>
                                                 <td><Skeleton className="h-3 w-24 rounded" /></td>
                                                 <td><Skeleton className="h-3 w-20 rounded" /></td>

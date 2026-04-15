@@ -41,8 +41,7 @@ export async function DocumentListServer({ orgId, contextId, sort, cursor, filte
                     <TableContent aria-label="Documents" selectionMode="none">
                         <TableHeader>
                             <TableColumn id="id" isRowHeader>ID</TableColumn>
-                            <TableColumn id="name">Name</TableColumn>
-                            <TableColumn id="created" className="w-28">Created</TableColumn>
+                            <TableColumn id="role">Role</TableColumn>
                             <TableColumn id="actions" className="w-36 text-right">Actions</TableColumn>
                         </TableHeader>
                         <TableBody>

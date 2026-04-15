@@ -234,4 +234,17 @@ export class ContextRepository extends AbstractFirebaseRepository<Context> {
       );
     }
   }
+
+  /**
+   * Count total contexts for this organization.
+   * Uses Firestore's efficient count() API.
+   */
+  async countByOrg(): Promise<Result<number, AppError>> {
+    try {
+      const countSnap = await this.collection().count().get();
+      return ok(countSnap.data().count);
+    } catch (cause) {
+      return err(appError("INTERNAL_ERROR", "Failed to count contexts", cause));
+    }
+  }
 }

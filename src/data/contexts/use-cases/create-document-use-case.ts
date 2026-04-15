@@ -41,23 +41,12 @@ export class CreateDocumentUseCase extends BaseUseCase<
   protected async handle(
     input: z.infer<typeof CreateDocumentSchema>,
   ): Promise<Result<ContextDocument, AppError>> {
-    console.log("[CreateDocumentUseCase] input.metadata:", input.metadata);
-
-    // Generate default name from content if not provided
-    let name = input.name;
-    if (!name && input.metadata?.content) {
-      // Use first line or first 50 chars of content as name
-      const content = input.metadata.content as string;
-      name =
-        content.split("\n")[0].substring(0, 50).trim() || "Untitled Document";
-    }
-    name = name || "Untitled Document";
-
     const createResult = await this.docRepo.create(
       input.orgId,
       input.contextId,
       {
-        name,
+        role: input.role,
+        parts: input.parts,
         metadata: input.metadata,
         createdBy: this.ctx.uid,
       },
@@ -65,10 +54,6 @@ export class CreateDocumentUseCase extends BaseUseCase<
 
     if (!createResult.ok) return err(createResult.error);
 
-    console.log(
-      "[CreateDocumentUseCase] created doc.metadata:",
-      createResult.value.metadata,
-    );
     // Increment context document count (non-fatal if fails)
     await this.contextRepo.incrementDocumentCount(input.contextId, 1);
 

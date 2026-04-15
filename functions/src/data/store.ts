@@ -187,7 +187,11 @@ export async function deleteStore(
 export async function getStoreDocuments(
   orgId: string,
   storeId: string,
-): Promise<{ items: StoreDocumentData[]; hasNext: boolean; nextCursor: string | null }> {
+): Promise<{
+  items: StoreDocumentData[];
+  hasNext: boolean;
+  nextCursor: string | null;
+}> {
   const pageSize = 25;
   const snap = await adminDb
     .collection(`organizations/${orgId}/stores/${storeId}/documents`)

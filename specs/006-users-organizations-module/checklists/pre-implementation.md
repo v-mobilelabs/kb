@@ -310,17 +310,17 @@ If issues occur after launch and feature needs to be disabled:
 
 Once live, track these metrics to ensure feature is healthy:
 
-| Metric | Target | Current | Owner |
-| ---- | ---- | ---- | ---- |
-| User list query latency (p99) | < 500 ms | — | Backend Lead |
-| User removal action latency (p99) | < 2 s | — | Backend Lead |
-| Session invalidation latency (p50) | < 5 min | — | Backend Lead |
-| Deletion job completion rate | > 95% | — | Backend Lead |
-| Audit log query latency (p99) | < 1 s | — | Backend Lead |
-| Cloud Function error rate | < 0.1% | — | DevOps |
-| User adoption (% of orgs > 1 removal) | > 50% | — | Product Manager |
-| Accidental removal rate | < 1% | — | Product Manager |
-| Data recovery incidents | < 5 total | — | Support |
+| Metric                                | Target    | Current | Owner           |
+| ------------------------------------- | --------- | ------- | --------------- |
+| User list query latency (p99)         | < 500 ms  | —       | Backend Lead    |
+| User removal action latency (p99)     | < 2 s     | —       | Backend Lead    |
+| Session invalidation latency (p50)    | < 5 min   | —       | Backend Lead    |
+| Deletion job completion rate          | > 95%     | —       | Backend Lead    |
+| Audit log query latency (p99)         | < 1 s     | —       | Backend Lead    |
+| Cloud Function error rate             | < 0.1%    | —       | DevOps          |
+| User adoption (% of orgs > 1 removal) | > 50%     | —       | Product Manager |
+| Accidental removal rate               | < 1%      | —       | Product Manager |
+| Data recovery incidents               | < 5 total | —       | Support         |
 
 ---
 
@@ -352,11 +352,10 @@ Launch is a **GO** when:
 
 ## Final Approval Sign-Off
 
-| Role | Name | Date | Signature |
-| ---- | ---- | ---- | ---- |
-| Product Manager | [Name] | [Date] | _____ |
-| Engineering Lead | [Name] | [Date] | _____ |
-| Security/Compliance | [Name] | [Date] | _____ |
-| QA Lead | [Name] | [Date] | _____ |
-| DevOps/SRE | [Name] | [Date] | _____ |
-
+| Role                | Name   | Date   | Signature |
+| ------------------- | ------ | ------ | --------- |
+| Product Manager     | [Name] | [Date] | **\_**    |
+| Engineering Lead    | [Name] | [Date] | **\_**    |
+| Security/Compliance | [Name] | [Date] | **\_**    |
+| QA Lead             | [Name] | [Date] | **\_**    |
+| DevOps/SRE          | [Name] | [Date] | **\_**    |

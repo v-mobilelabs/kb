@@ -142,7 +142,7 @@ export function RagQueryTester({ orgId }: RagQueryTesterProps) {
 
                 {/* Store Selection */}
                 <div className="flex flex-col gap-2">
-                    <label className="text-sm font-medium">Store</label>
+                    <label htmlFor="store-select" className="text-sm font-medium">Store</label>
                     {isLoadingStores ? (
                         <div className="flex items-center gap-2">
                             <Spinner size="sm" />
@@ -159,6 +159,7 @@ export function RagQueryTester({ orgId }: RagQueryTesterProps) {
                     ) : (
                         <div className="flex gap-2">
                             <select
+                                id="store-select"
                                 value={selectedStoreId}
                                 onChange={(e) => setSelectedStoreId(e.target.value)}
                                 disabled={isQuerying}
@@ -177,7 +178,7 @@ export function RagQueryTester({ orgId }: RagQueryTesterProps) {
 
                 {/* API Key Selection */}
                 <div className="flex flex-col gap-2">
-                    <label className="text-sm font-medium">API Key</label>
+                    <label htmlFor="api-key-select" className="text-sm font-medium">API Key</label>
                     {isLoadingApiKeys ? (
                         <div className="flex items-center gap-2">
                             <Spinner size="sm" />
@@ -196,6 +197,7 @@ export function RagQueryTester({ orgId }: RagQueryTesterProps) {
                     ) : (
                         <div className="flex gap-2">
                             <select
+                                id="api-key-select"
                                 value={selectedApiKeyId}
                                 onChange={(e) => setSelectedApiKeyId(e.target.value)}
                                 disabled={isQuerying}
@@ -214,8 +216,9 @@ export function RagQueryTester({ orgId }: RagQueryTesterProps) {
 
                 {/* Query Input */}
                 <div className="flex flex-col gap-2">
-                    <label className="text-sm font-medium">Query</label>
+                    <label htmlFor="query-input" className="text-sm font-medium">Query</label>
                     <textarea
+                        id="query-input"
                         placeholder="Enter your search query..."
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}

@@ -14,7 +14,9 @@ import type { AppError, Result } from "@/lib/result";
 interface DashboardMetrics {
   totalActiveKeys: number;
   totalStores: number;
-  totalMemories: number;
+  totalFiles: number;
+  totalContexts: number;
+  totalMembers: number;
   keyActivity: { date: string; count: number }[];
   errors: { date: string; count: number }[];
 }

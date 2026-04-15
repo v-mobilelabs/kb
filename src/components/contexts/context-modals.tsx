@@ -22,7 +22,7 @@ export function ContextModals({ orgId }: Readonly<Props>) {
 
     const deleteMutation = useMutation({
         mutationFn: (ctx: Context) => deleteContextAction({ contextId: ctx.id }),
-        onSuccess: (result) => {
+        onSuccess: (result: any) => {
             if (!result.ok) return;
             queryClient.invalidateQueries({ queryKey: queryKeys.contextsList(orgId, {}) });
             closeDelete();

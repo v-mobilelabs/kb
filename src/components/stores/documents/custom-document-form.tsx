@@ -67,7 +67,7 @@ export function CustomDocumentForm({ storeId, document }: Readonly<CustomDocumen
         }
     );
 
-    const mutation = useMutation<any, Error, void>({
+    const mutation = useMutation<unknown, Error, void>({
         mutationFn: () => {
             const source = { id: sourceId.trim() || "manual", collection: sourceCollection.trim() || "default" };
             if (isEdit && document) {
@@ -83,7 +83,7 @@ export function CustomDocumentForm({ storeId, document }: Readonly<CustomDocumen
         },
         // Only apply optimistic updates when in edit mode
         ...(isEdit ? optimisticUpdateOptions : {}),
-        onSuccess: (result) => {
+        onSuccess: (result: any) => {
             if (!result.ok) {
                 setFormError(result.error.message);
                 return;
@@ -159,8 +159,9 @@ export function CustomDocumentForm({ storeId, document }: Readonly<CustomDocumen
                 </div>
 
                 <div className="flex flex-col gap-1">
-                    <label className="text-sm font-medium">Data (JSON) *</label>
+                    <label htmlFor="json-data" className="text-sm font-medium">Data (JSON) *</label>
                     <textarea
+                        id="json-data"
                         className={`w-full font-mono text-sm bg-surface border rounded-lg px-3 py-2 min-h-[240px] outline-none focus:border-accent transition-colors resize-y ${jsonError ? "border-danger" : "border-foreground/10"
                             }`}
                         value={data}

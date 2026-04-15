@@ -7,12 +7,28 @@ export default function LandingPage() {
       <header className="border-b border-[--border] bg-[--surface]">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
           <span className="text-lg font-bold tracking-tight text-[--accent]">CosmoOps</span>
-          <Link
-            href="/login"
-            className="text-sm font-medium px-4 py-2 rounded-lg bg-[--accent] text-[--accent-foreground] hover:opacity-90 transition-opacity"
-          >
-            Sign in
-          </Link>
+          <div className="flex items-center gap-3">
+            <a
+              href="https://kb.cosmoops.com/playground"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm font-medium text-[--foreground] hover:text-[--accent] transition-colors"
+            >
+              API Explore
+            </a>
+            <Link
+              href="/docs"
+              className="text-sm font-medium text-[--foreground] hover:text-[--accent] transition-colors"
+            >
+              Docs
+            </Link>
+            <Link
+              href="/login"
+              className="text-sm font-medium px-4 py-2 rounded-lg bg-[--accent] text-[--accent-foreground] hover:opacity-90 transition-opacity"
+            >
+              Sign in
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -264,8 +280,31 @@ console.log(results);`}
       {/* CTA */}
       <section className="border-t border-[--border] bg-[--background]">
         <div className="max-w-2xl mx-auto px-6 py-16 text-center">
-          <h2 className="text-3xl font-bold tracking-tight text-[--foreground] mb-4">
-            Ready to ship AI agents?
+          <h2 className="text-3xl font-bold tracking-ti8">
+        <div className="max-w-5xl mx-auto px-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-6 mb-6 pb-6 border-b border-[--border]">
+            <span className="text-sm font-semibold text-[--foreground]">CosmoOps</span>
+            <div className="flex items-center gap-6">
+              <a
+                href="https://kb.cosmoops.com/playground"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-[--muted] hover:text-[--foreground] transition-colors"
+              >
+                API Explore
+              </a>
+              <Link
+                href="/docs"
+                className="text-sm text-[--muted] hover:text-[--foreground] transition-colors"
+              >
+                Docs
+              </Link>
+            </div>
+          </div>
+          <p className="text-center text-xs text-[--muted]">
+            © 2025 CosmoOps. All rights reserved.
+          </p>
+        </div>
           </h2>
           <p className="text-base text-[--muted] mb-8">
             Get an API key and start building your RAG application in minutes. No credit card required.

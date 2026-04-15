@@ -50,7 +50,18 @@ export function sendErrorResponse(
   defaultStatus = 500,
   defaultError = "Internal server error",
 ): void {
-  const message = err instanceof Error ? err.message : String(err);
+  let message = "";
+
+  if (err instanceof Error) {
+    message = err.message;
+  } else if (typeof err === "object" && err !== null) {
+    // Handle objects with message property (AppError, result objects, etc.)
+    message = (err as Record<string, unknown>).message ?
+      String((err as Record<string, unknown>).message) :
+      String(err);
+  } else {
+    message = String(err);
+  }
 
   if (message === "Store not found") {
     res.status(404).json({ error: "Store not found" });

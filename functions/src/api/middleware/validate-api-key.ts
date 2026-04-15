@@ -8,7 +8,7 @@ export interface AuthenticatedRequest extends Request {
 
 /**
  * Middleware to validate API key and extract orgId.
- * Checks Authorization header or X-API-Key header for the API key.
+ * Checks X-API-Key header for the API key.
  * Looks up the key in RTDB (cached from Firestore on creation; removed on revoke/delete).
  * Sets orgId and apiKeyId on the request for use in route handlers.
  */
@@ -18,17 +18,13 @@ export async function validateApiKey(
   next: NextFunction,
 ): Promise<void> {
   try {
-    // Extract API key from Authorization header (Bearer token) or X-API-Key header
-    const authHeader = req.headers["authorization"] as string | undefined;
-    const apiKey = authHeader?.startsWith("Bearer ") ?
-      authHeader.slice(7) :
-      (req.headers["x-api-key"] as string | undefined);
+    // Extract API key from X-API-Key header
+    const apiKey = req.headers["x-api-key"] as string | undefined;
 
     if (!apiKey || !apiKey.trim()) {
       res.status(401).json({
         error: "MISSING_API_KEY",
-        message:
-          "Missing API key. Provide via Authorization or X-API-Key header.",
+        message: "Missing API key. Provide via X-API-Key header.",
       });
       return;
     }

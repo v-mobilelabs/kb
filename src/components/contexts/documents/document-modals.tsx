@@ -23,7 +23,7 @@ export function DocumentModals({ orgId, contextId }: Readonly<Props>) {
     const deleteMutation = useMutation({
         mutationFn: (doc: ContextDocument) =>
             deleteDocumentAction({ contextId, docId: doc.id }),
-        onSuccess: (result) => {
+        onSuccess: (result: any) => {
             if (!result.ok) return;
             closeDelete();
             router.refresh();
@@ -56,7 +56,7 @@ export function DocumentModals({ orgId, contextId }: Readonly<Props>) {
                 <ReusableConfirmModal
                     isOpen
                     title="Delete document"
-                    message={`Delete document "${deleteTarget.name ?? deleteTarget.id}"? This action cannot be undone.`}
+                    message={`Delete document (role: ${deleteTarget.role})? This action cannot be undone.`}
                     confirmLabel="Delete"
                     isPending={deleteMutation.isPending}
                     onConfirm={() => deleteMutation.mutate(deleteTarget)}

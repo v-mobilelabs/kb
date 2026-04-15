@@ -16,9 +16,19 @@ service cloud.firestore {
     }
 
     // ─── Store Module ──────────────────────────────────────────────
+    // isOrgMember: checks memberships subcollection (new schema as of module 006)
     function isOrgMember(orgId) {
       return request.auth != null
-        && exists(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid));
+        && exists(/databases/$(database)/documents/organizations/$(orgId)/memberships/$(request.auth.uid))
+        && get(/databases/$(database)/documents/organizations/$(orgId)/memberships/$(request.auth.uid)).data.deletedAt == null;
+    }
+
+    // isOrgAdmin: owner or admin baseRole
+    function isOrgAdmin(orgId) {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/organizations/$(orgId)/memberships/$(request.auth.uid))
+        && get(/databases/$(database)/documents/organizations/$(orgId)/memberships/$(request.auth.uid)).data.deletedAt == null
+        && get(/databases/$(database)/documents/organizations/$(orgId)/memberships/$(request.auth.uid)).data.baseRole in ["owner", "admin"];
     }
 
     match /organizations/{orgId}/stores/{storeId} {
@@ -72,6 +82,25 @@ service cloud.firestore {
       // DELETE: Org member can delete context
       allow delete: if isOrgMember(orgId)
         && resource.data.orgId == orgId;
+    }
+
+    // ─── Users & Organizations Module (006) ────────────────────────
+    // Memberships: read only by org members; writes by server (Admin SDK) only
+    match /organizations/{orgId}/memberships/{userId} {
+      allow read: if isOrgMember(orgId);
+      allow write: if false; // server-side only via Admin SDK
+    }
+
+    // Org-scoped audit log: read by org admins; append-only (no update/delete) by server
+    match /organizations/{orgId}/audits/{auditId} {
+      allow read: if isOrgAdmin(orgId);
+      allow create: if false; // server-side only via Admin SDK
+      allow update, delete: if false; // immutable
+    }
+
+    // Deletion tasks: server-side only; no client access
+    match /deletionTasks/{taskId} {
+      allow read, write: if false; // Admin SDK only (Cloud Functions)
     }
   }
 }

@@ -29,9 +29,7 @@ export class DeleteAccountUseCase extends BaseUseCase<
     };
   }
 
-  protected async handle(
-    _input: z.infer<typeof DeleteAccountSchema>,
-  ): Promise<Result<{ deleted: true }, AppError>> {
+  protected async handle(): Promise<Result<{ deleted: true }, AppError>> {
     const { uid, orgId } = this.ctx;
 
     // Cascade delete: stores & documents → apiKeys → org → profile

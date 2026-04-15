@@ -34,7 +34,7 @@ export function StoreEditForm({ store, orgId, onClose }: Readonly<StoreEditFormP
     const [formError, setFormError] = useState("");
 
     const mutation = useMutation<
-        any,
+        unknown,
         Error,
         void
     >({
@@ -50,7 +50,7 @@ export function StoreEditForm({ store, orgId, onClose }: Readonly<StoreEditFormP
             description: description.trim() || null,
             enableRagEvaluation,
         }),
-        onSuccess: (result) => {
+        onSuccess: (result: any) => {
             if (!result.ok) {
                 if (result.error.code === "CONFLICT") {
                     setNameError(result.error.message);

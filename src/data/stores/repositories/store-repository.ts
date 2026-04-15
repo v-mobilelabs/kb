@@ -200,7 +200,7 @@ export class StoreRepository extends AbstractFirebaseRepository<Store> {
 
     // Update the updatedAt timestamp using server-side timestamp
     const updateRes = await this.update(storeId, {
-      updatedAt: Timestamp.now() as any,
+      updatedAt: new Date(),
     });
     return updateRes.ok ? ok(undefined) : err(updateRes.error);
   }

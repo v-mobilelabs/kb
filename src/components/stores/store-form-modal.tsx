@@ -33,7 +33,7 @@ export function StoreFormModal({ orgId: _orgId, store, onClose }: Readonly<Store
     const [nameError, setNameError] = useState("");
     const [formError, setFormError] = useState("");
 
-    const mutation = useMutation<any, Error, void>({
+    const mutation = useMutation<unknown, Error, void>({
         mutationFn: () => {
             if (isEdit && store) {
                 return updateStoreAction({
@@ -49,7 +49,7 @@ export function StoreFormModal({ orgId: _orgId, store, onClose }: Readonly<Store
                 enableRagEvaluation,
             });
         },
-        onSuccess: (result) => {
+        onSuccess: (result: any) => {
             if (!result.ok) {
                 if (result.error.code === "CONFLICT") {
                     setNameError(result.error.message);

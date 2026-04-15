@@ -56,8 +56,9 @@ export type ListContextsInput = z.infer<typeof ListContextsSchema>;
 export const CreateDocumentSchema = z.object({
   orgId: z.string().min(1),
   contextId: z.string().min(1),
-  name: z.string().optional(),
-  metadata: z.record(z.string(), z.unknown()).optional(),
+  role: z.enum(["system", "user", "assistant"]),
+  parts: z.array(z.unknown()),
+  metadata: z.unknown().optional(),
 });
 export type CreateDocumentInput = z.infer<typeof CreateDocumentSchema>;
 
@@ -65,8 +66,9 @@ export const UpdateDocumentSchema = z.object({
   orgId: z.string().min(1),
   contextId: z.string().min(1),
   docId: z.string().min(1),
-  name: z.string().optional(),
-  metadata: z.record(z.string(), z.unknown()).optional(),
+  role: z.enum(["system", "user", "assistant"]).optional(),
+  parts: z.array(z.unknown()).optional(),
+  metadata: z.unknown().optional(),
 });
 export type UpdateDocumentInput = z.infer<typeof UpdateDocumentSchema>;
 
@@ -84,31 +86,14 @@ export const GetDocumentSchema = z.object({
 });
 export type GetDocumentInput = z.infer<typeof GetDocumentSchema>;
 
-export type DocumentSortKey =
-  | "id_asc"
-  | "id_desc"
-  | "name_asc"
-  | "name_desc"
-  | "createdAt_desc"
-  | "createdAt_asc"
-  | "updatedAt_desc"
-  | "updatedAt_asc";
+export type DocumentSortKey = "id_asc" | "id_desc" | "role_asc" | "role_desc";
 
 export const ListDocumentsSchema = z.object({
   orgId: z.string().min(1),
   contextId: z.string().min(1),
   sort: z
-    .enum([
-      "id_asc",
-      "id_desc",
-      "name_asc",
-      "name_desc",
-      "createdAt_desc",
-      "createdAt_asc",
-      "updatedAt_desc",
-      "updatedAt_asc",
-    ])
-    .default("createdAt_desc"),
+    .enum(["id_asc", "id_desc", "role_asc", "role_desc"])
+    .default("id_desc"),
   cursor: z.string().optional(),
   limit: z.number().int().positive().max(100).default(25),
   filterId: z.string().optional(),

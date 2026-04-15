@@ -10,10 +10,10 @@
 
 This SaaS platform provides API services (Authentication, Memory, Store, Context, Dashboard) to organizations via API keys. Auditing is split into two tiers:
 
-| Tier | Collection | Scope | orgId | Who can read |
-|------|-----------|-------|-------|--------------|
-| **System** | `/audits/{auditId}` | Platform-wide: user auth (login/logout), API key events, org lifecycle, rate limits. Many events have **no orgId** (e.g., login attempts before org context is known). | `null` or set | Platform super-admins only |
-| **Org-scoped** | `/organizations/{orgId}/audits/{auditId}` | Always org-bound: user management, role/policy changes, resource CRUD within the tenant. `orgId` is always set. | always set | Org admins (based on RBAC permission `audit:read`) |
+| Tier           | Collection                                | Scope                                                                                                                                                                  | orgId         | Who can read                                       |
+| -------------- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | -------------------------------------------------- |
+| **System**     | `/audits/{auditId}`                       | Platform-wide: user auth (login/logout), API key events, org lifecycle, rate limits. Many events have **no orgId** (e.g., login attempts before org context is known). | `null` or set | Platform super-admins only                         |
+| **Org-scoped** | `/organizations/{orgId}/audits/{auditId}` | Always org-bound: user management, role/policy changes, resource CRUD within the tenant. `orgId` is always set.                                                        | always set    | Org admins (based on RBAC permission `audit:read`) |
 
 Both collections are append-only and immutable.
 
@@ -23,12 +23,14 @@ Both collections are append-only and immutable.
 
 Each organization (tenant) has fine-grained access control via two building blocks:
 
-| Concept | Collection | Description |
-|---------|-----------|-------------|
-| **Role** | `organizations/{orgId}/roles/{roleId}` | Named set of permissions (e.g., `store-editor`, `context-viewer`). Built-in system roles: `owner`, `admin`, `member`. Custom roles defined per org. |
-| **Policy** | `organizations/{orgId}/policies/{policyId}` | ABAC rules that conditionally grant/deny permissions based on resource attributes (e.g., allow `store:write` only on stores tagged `environment=staging`). |
+| Concept               | Version | Collection                           | Description                                                                    |
+| --------------------- | ------- | ------------------------------------ | ------------------------------------------------------------------------------ |
+| **System Roles**      | @v1     | `organizations/{orgId}/memberships/` | Built-in roles: `owner`, `admin`, `member` (no creation/deletion/modification) |
+| **Custom Roles**      | @v2     | `organizations/{orgId}/roles/`       | Named permission sets (create, update, delete). Deferred to v2.                |
+| **Attributes (ABAC)** | @v2     | `organizations/{orgId}/policies/`    | Conditional policies based on resource attributes. Deferred to v2.             |
 
 **How evaluation works (order of precedence)**:
+
 1. Check if user is org `owner` → full access.
 2. Evaluate ABAC `policies` matching the resource attributes → explicit deny overrides any allow.
 3. Evaluate RBAC `roles` assigned to the user → collect effective permissions.
@@ -45,25 +47,27 @@ Examples: `store:read`, `memory:write`, `users:manage`, `audit:read`.
 
 Subcollection on each organization. Tracks all user memberships, including role and deletion status.
 
-| Field       | Type                | Required | Notes                                                                          |
-| ----------- | ------------------- | -------- | ------------------------------------------------------------------------------ |
-| `id`        | `string`            | ✅       | Firebase Auth UID (same as document ID)                                        |
-| `orgId`       | `string`              | ✅       | Denormalized parent org ID (enables `collectionGroup` queries)                                |
-| `userId`      | `string`              | ✅       | Reference to `/profiles/{userId}`                                                            |
-| `baseRole`    | `"owner" \| "admin" \| "member"` | ✅ | Built-in base role. `owner` has full access. `admin` can manage users and custom roles. `member` is governed by assigned custom roles. |
-| `roleIds`     | `string[]`            | ✅       | IDs of custom roles assigned to this user in this org (from `organizations/{orgId}/roles/`). Empty array if none. |
-| `joinedAt`    | `Timestamp`           | ✅       | When user joined (or re-joined) this organization                                            |
-| `lastActiveAt`| `Timestamp \| null`   | ✅       | Last time user accessed any resource in this org; cached (update max once/5min)              |
-| `deletedAt`   | `Timestamp \| null`   | ✅       | Soft-delete timestamp; `null` if active; set when user is removed from org                   |
-| `createdAt`   | `Timestamp`           | ✅       | Server-set on document creation                                                              |
-| `updatedAt`   | `Timestamp`           | ✅       | Server-set on every write                                                                    |
+| Field          | Type                             | Required | Notes                                                                                                                                                                             |
+| -------------- | -------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`           | `string`                         | ✅       | Firebase Auth UID (same as document ID)                                                                                                                                           |
+| `orgId`        | `string`                         | ✅       | Denormalized parent org ID (enables `collectionGroup` queries)                                                                                                                    |
+| `userId`       | `string`                         | ✅       | Reference to `/profiles/{userId}`                                                                                                                                                 |
+| `baseRole`     | `"owner" \| "admin" \| "member"` | ✅       | Built-in system role (v1). `owner` is org creator, cannot be removed; `admin` can manage users; `member` has read access. Custom role assignment via `roleIds` is deferred to v2. |
+| `roleIds`      | `string[]`                       | ✅       | IDs of custom roles assigned to this user in this org (from `organizations/{orgId}/roles/`). Deferred to v2; always empty in v1.                                                  |
+| `joinedAt`     | `Timestamp`                      | ✅       | When user joined (or re-joined) this organization                                                                                                                                 |
+| `lastActiveAt` | `Timestamp \| null`              | ✅       | Last time user accessed any resource in this org; cached (update max once/5min)                                                                                                   |
+| `deletedAt`    | `Timestamp \| null`              | ✅       | Soft-delete timestamp; `null` if active; set when user is removed from org                                                                                                        |
+| `createdAt`    | `Timestamp`                      | ✅       | Server-set on document creation                                                                                                                                                   |
+| `updatedAt`    | `Timestamp`                      | ✅       | Server-set on every write                                                                                                                                                         |
 
 **Indexes**:
+
 - `(orgId ASC, deletedAt ASC, joinedAt DESC)` — for listing active members sorted by join date
 - `(orgId ASC, baseRole ASC, deletedAt ASC)` — for filtering by built-in role
 - `(userId ASC, deletedAt ASC)` — for finding user's active memberships across orgs (`collectionGroup` query)
 
 **Notes**:
+
 - Membership records are soft-deleted but never hard-deleted (for recovery and audit purposes).
 - The presence of a membership record in Firestore with `deletedAt != null` indicates the user was removed but data is in grace period.
 - To reactivate a removed user, `deletedAt` is set back to `null` and associated deletion task is cancelled.
@@ -71,31 +75,32 @@ Subcollection on each organization. Tracks all user memberships, including role 
 
 ---
 
-### `/organizations/{orgId}/roles/{roleId}` _(New — RBAC)_
+### `/organizations/{orgId}/roles/{roleId}` _(v2 Feature — Deferred)_
 
-Custom roles defined per organization. Orgs start with built-in system roles (`owner`, `admin`, `member`) that cannot be deleted. Admins can create additional custom roles.
+Custom roles defined per organization. **Scope: v2 only. Built-in system roles (owner, admin, member) in `/memberships` are immutable in v1.**
 
-| Field         | Type       | Required | Notes                                                                       |
-| ------------- | ---------- | -------- | --------------------------------------------------------------------------- |
-| `id`          | `string`   | ✅       | Firestore auto-generated or slug (e.g., `store-editor`)                    |
-| `orgId`       | `string`   | ✅       | Owning organization                                                         |
-| `name`        | `string`   | ✅       | Human-readable name (e.g., "Store Editor")                                 |
-| `description` | `string \| null` | ✅  | Optional description                                                        |
-| `isSystem`    | `boolean`  | ✅       | `true` for built-in roles (`owner`, `admin`, `member`); non-deletable       |
-| `permissions` | `string[]` | ✅       | List of permission strings (e.g., `["store:read", "store:write", "files:read"]`) |
-| `createdBy`   | `string`   | ✅       | Firebase Auth UID of admin who created the role                             |
-| `createdAt`   | `Timestamp`| ✅       | Server-set                                                                  |
-| `updatedAt`   | `Timestamp`| ✅       | Server-set on every write                                                   |
+| Field         | Type             | Required | Notes                                                                            |
+| ------------- | ---------------- | -------- | -------------------------------------------------------------------------------- |
+| `id`          | `string`         | ✅       | Firestore auto-generated or slug (e.g., `store-editor`)                          |
+| `orgId`       | `string`         | ✅       | Owning organization                                                              |
+| `name`        | `string`         | ✅       | Human-readable name (e.g., "Store Editor")                                       |
+| `description` | `string \| null` | ✅       | Optional description                                                             |
+| `isSystem`    | `boolean`        | ✅       | `true` for built-in roles (`owner`, `admin`, `member`); non-deletable            |
+| `permissions` | `string[]`       | ✅       | List of permission strings (e.g., `["store:read", "store:write", "files:read"]`) |
+| `createdBy`   | `string`         | ✅       | Firebase Auth UID of admin who created the role                                  |
+| `createdAt`   | `Timestamp`      | ✅       | Server-set                                                                       |
+| `updatedAt`   | `Timestamp`      | ✅       | Server-set on every write                                                        |
 
 **Built-in system roles (seeded per org on creation)**:
 
-| Role | Permissions |
-|------|------------|
-| `owner` | `*` (all permissions; cannot be restricted) |
-| `admin` | `users:manage`, `api-keys:manage`, `audit:read`, `store:*`, `memory:*`, `context:*`, `files:*` |
-| `member` | `store:read`, `memory:read`, `context:read`, `files:read` |
+| Role     | Permissions                                                                                    |
+| -------- | ---------------------------------------------------------------------------------------------- |
+| `owner`  | `*` (all permissions; cannot be restricted)                                                    |
+| `admin`  | `users:manage`, `api-keys:manage`, `audit:read`, `store:*`, `memory:*`, `context:*`, `files:*` |
+| `member` | `store:read`, `memory:read`, `context:read`, `files:read`                                      |
 
 **Available permissions**:
+
 ```
 auth:read
 memory:read  memory:write  memory:delete  memory:manage
@@ -109,53 +114,58 @@ audit:read
 ```
 
 **Indexes**:
+
 - `(orgId ASC, isSystem ASC)` — for listing system vs custom roles
 
 **Notes**:
+
 - Permission strings ending in `:manage` imply all sub-actions (e.g., `store:manage` → `store:read` + `store:write` + `store:delete`).
 - The wildcard `*` is only valid for the built-in `owner` role and is not stored literally; evaluated server-side.
 - Roles are evaluated server-side by the API middleware; Firestore security rules enforce read/write access to collections but not fine-grained resource-level policies.
 
 ---
 
-### `/organizations/{orgId}/policies/{policyId}` _(New — ABAC)_
+### `/organizations/{orgId}/policies/{policyId}` _(v2 Feature — Deferred)_
 
-Attribute-based access control policies. Conditionally grant or deny permissions based on resource and user attributes. Evaluated **after** RBAC role checks; explicit `deny` overrides any role-granted permission.
+Attribute-based access control policies. **Scope: v2 only. Not implemented in v1.**
 
-| Field         | Type                         | Required | Notes                                                                          |
-| ------------- | ---------------------------- | -------- | ------------------------------------------------------------------------------ |
-| `id`          | `string`                     | ✅       | Firestore auto-generated document ID                                           |
-| `orgId`       | `string`                     | ✅       | Owning organization                                                            |
-| `name`        | `string`                     | ✅       | Human-readable policy name (e.g., "Staging stores write-only for QA team")    |
-| `description` | `string \| null`             | ✅       | Optional description                                                           |
-| `effect`      | `"allow" \| "deny"`          | ✅       | Whether this policy grants or denies the permission                            |
-| `permissions` | `string[]`                   | ✅       | Permissions this policy affects (e.g., `["store:write", "store:delete"]`)     |
-| `subjects`    | `PolicySubject[]`            | ✅       | Who this policy applies to (users, roles, or all members)                     |
-| `conditions`  | `PolicyCondition[]`          | ✅       | Attribute conditions that must ALL match for policy to apply                   |
-| `isActive`    | `boolean`                    | ✅       | Whether policy is actively evaluated (admins can disable without deleting)     |
-| `createdBy`   | `string`                     | ✅       | Firebase Auth UID of admin who created the policy                              |
-| `createdAt`   | `Timestamp`                  | ✅       | Server-set                                                                     |
-| `updatedAt`   | `Timestamp`                  | ✅       | Server-set on every write                                                      |
+| Field         | Type                | Required | Notes                                                                      |
+| ------------- | ------------------- | -------- | -------------------------------------------------------------------------- |
+| `id`          | `string`            | ✅       | Firestore auto-generated document ID                                       |
+| `orgId`       | `string`            | ✅       | Owning organization                                                        |
+| `name`        | `string`            | ✅       | Human-readable policy name (e.g., "Staging stores write-only for QA team") |
+| `description` | `string \| null`    | ✅       | Optional description                                                       |
+| `effect`      | `"allow" \| "deny"` | ✅       | Whether this policy grants or denies the permission                        |
+| `permissions` | `string[]`          | ✅       | Permissions this policy affects (e.g., `["store:write", "store:delete"]`)  |
+| `subjects`    | `PolicySubject[]`   | ✅       | Who this policy applies to (users, roles, or all members)                  |
+| `conditions`  | `PolicyCondition[]` | ✅       | Attribute conditions that must ALL match for policy to apply               |
+| `isActive`    | `boolean`           | ✅       | Whether policy is actively evaluated (admins can disable without deleting) |
+| `createdBy`   | `string`            | ✅       | Firebase Auth UID of admin who created the policy                          |
+| `createdAt`   | `Timestamp`         | ✅       | Server-set                                                                 |
+| `updatedAt`   | `Timestamp`         | ✅       | Server-set on every write                                                  |
 
 **Type: PolicySubject**:
+
 ```typescript
 type PolicySubject =
-  | { type: "user"; userId: string }       // specific user
-  | { type: "role"; roleId: string }       // all users with this custom role
+  | { type: "user"; userId: string } // specific user
+  | { type: "role"; roleId: string } // all users with this custom role
   | { type: "baseRole"; baseRole: "admin" | "member" } // all users with built-in role
-  | { type: "all" };                       // every org member
+  | { type: "all" }; // every org member
 ```
 
 **Type: PolicyCondition** — resource/environment attribute that must match:
+
 ```typescript
 interface PolicyCondition {
-  attribute: string;   // e.g. "resource.tag.environment", "resource.createdBy", "request.ipCidr"
+  attribute: string; // e.g. "resource.tag.environment", "resource.createdBy", "request.ipCidr"
   operator: "eq" | "neq" | "in" | "notIn" | "startsWith" | "exists";
   value: string | string[] | boolean;
 }
 ```
 
 **Example policy** — deny store deletion for non-owners in production:
+
 ```json
 {
   "name": "Protect production stores",
@@ -163,15 +173,21 @@ interface PolicyCondition {
   "permissions": ["store:delete"],
   "subjects": [{ "type": "baseRole", "baseRole": "member" }],
   "conditions": [
-    { "attribute": "resource.tag.environment", "operator": "eq", "value": "production" }
+    {
+      "attribute": "resource.tag.environment",
+      "operator": "eq",
+      "value": "production"
+    }
   ]
 }
 ```
 
 **Indexes**:
+
 - `(orgId ASC, isActive ASC)` — for loading all active policies per org (cached in middleware)
 
 **Notes**:
+
 - Policies are evaluated server-side only; never enforced by Firestore security rules directly.
 - All active policies for an org are loaded and cached in middleware (TTL: 60 s) to avoid per-request Firestore reads.
 - Policy conditions operate on resource metadata (tags, ownerId, etc.) passed by each service handler at evaluation time.
@@ -182,40 +198,43 @@ interface PolicyCondition {
 
 Top-level collection. Append-only. Tracks scheduled hard-deletion tasks for removed users.
 
-| Field               | Type                               | Required | Notes                                                                     |
-| ------------------- | ---------------------------------- | -------- | ------------------------------------------------------------------------- |
-| `id`                | `string`                           | ✅       | Firestore auto-generated document ID                                      |
-| `userId`            | `string`                           | ✅       | Firebase Auth UID of removed user                                         |
-| `orgId`             | `string`                           | ✅       | Organization where user was removed                                       |
-| `removedAt`         | `Timestamp`                        | ✅       | When user was removed (soft-delete timestamp)                             |
-| `scheduledDeleteAt` | `Timestamp`                        | ✅       | Target time for hard deletion (removedAt + gracePeriod)                   |
-| `status`            | `TaskStatus` (enum)                | ✅       | One of: `pending`, `in_progress`, `completed`, `failed`, `cancelled`       |
-| `retryCount`        | `number`                           | ✅       | Current retry attempt (0 on creation; incremented on each retry)           |
-| `maxRetries`        | `number`                           | ✅       | Maximum retries allowed (default: 3)                                      |
-| `error`             | `string \| null`                   | ✅       | Error message from last failed attempt; `null` if not failed yet            |
-| `gracePeriodDays`   | `number`                           | ✅       | Grace period applied (e.g., 30 days); snapshot of org config at removal    |
-| `recoveryDeadline`  | `Timestamp \| null`                | ✅       | Latest time user can be re-added to recover data; after this, recovery not possible |
-| `completedAt`       | `Timestamp \| null`                | ✅       | Timestamp when hard deletion completed; null until done                    |
-| `deletedEntityCount` | `{ stores?: number; apiKeys?: number; documents?: number; files?: number; }` | ✅ | Count of entities hard-deleted in Firestore & Cloud Storage |
-| `createdAt`         | `Timestamp`                        | ✅       | Server-set when task created                                               |
-| `updatedAt`         | `Timestamp`                        | ✅       | Server-set on every update (e.g., retry, completion)                       |
+| Field                | Type                                                                         | Required | Notes                                                                               |
+| -------------------- | ---------------------------------------------------------------------------- | -------- | ----------------------------------------------------------------------------------- |
+| `id`                 | `string`                                                                     | ✅       | Firestore auto-generated document ID                                                |
+| `userId`             | `string`                                                                     | ✅       | Firebase Auth UID of removed user                                                   |
+| `orgId`              | `string`                                                                     | ✅       | Organization where user was removed                                                 |
+| `removedAt`          | `Timestamp`                                                                  | ✅       | When user was removed (soft-delete timestamp)                                       |
+| `scheduledDeleteAt`  | `Timestamp`                                                                  | ✅       | Target time for hard deletion (removedAt + gracePeriod)                             |
+| `status`             | `TaskStatus` (enum)                                                          | ✅       | One of: `pending`, `in_progress`, `completed`, `failed`, `cancelled`                |
+| `retryCount`         | `number`                                                                     | ✅       | Current retry attempt (0 on creation; incremented on each retry)                    |
+| `maxRetries`         | `number`                                                                     | ✅       | Maximum retries allowed (default: 3)                                                |
+| `error`              | `string \| null`                                                             | ✅       | Error message from last failed attempt; `null` if not failed yet                    |
+| `gracePeriodDays`    | `number`                                                                     | ✅       | Grace period applied (e.g., 30 days); snapshot of org config at removal             |
+| `recoveryDeadline`   | `Timestamp \| null`                                                          | ✅       | Latest time user can be re-added to recover data; after this, recovery not possible |
+| `completedAt`        | `Timestamp \| null`                                                          | ✅       | Timestamp when hard deletion completed; null until done                             |
+| `deletedEntityCount` | `{ stores?: number; apiKeys?: number; documents?: number; files?: number; }` | ✅       | Count of entities hard-deleted in Firestore & Cloud Storage                         |
+| `createdAt`          | `Timestamp`                                                                  | ✅       | Server-set when task created                                                        |
+| `updatedAt`          | `Timestamp`                                                                  | ✅       | Server-set on every update (e.g., retry, completion)                                |
 
 **Indexes**:
+
 - `(orgId ASC, status ASC, scheduledDeleteAt ASC)` — for daily job to find tasks ready for deletion
 - `(status ASC, scheduledDeleteAt ASC)` — for cross-org deletion job queries
 - `(userId ASC, orgId ASC)` — for finding all deletion tasks for a user
 
 **Enum: TaskStatus**:
+
 ```typescript
-type TaskStatus = 
-  | "pending"      // created, waiting for next job run
-  | "in_progress"  // job is actively deleting
-  | "completed"    // all data hard-deleted successfully
-  | "failed"       // hard deletion failed after all retries
-  | "cancelled";   // user was re-added before grace period expired
+type TaskStatus =
+  | "pending" // created, waiting for next job run
+  | "in_progress" // job is actively deleting
+  | "completed" // all data hard-deleted successfully
+  | "failed" // hard deletion failed after all retries
+  | "cancelled"; // user was re-added before grace period expired
 ```
 
 **Notes**:
+
 - Deletion tasks are immutable append-only records. Updates to `status`, `retryCount`, `error`, `completedAt` are allowed but the task itself is never deleted.
 - `recoveryDeadline` is set to `scheduledDeleteAt` but can be customized per org policy.
 - On successful re-add within grace period, a new deletion task is created with status `cancelled` (old task NOT updated; immutable history is preserved).
@@ -228,71 +247,73 @@ Top-level collection. Platform-wide audit trail for all system-level events acro
 
 Captures: authentication events (API key auth, failures), org lifecycle (create, delete), rate limiting, and service-level API calls across all platform services (Auth, Memory, Store, Context, Dashboard).
 
-| Field           | Type                       | Required | Notes                                                                      |
-| --------------- | -------------------------- | -------- | -------------------------------------------------------------------------- |
-| `id`            | `string`                   | ✅       | Firestore auto-generated document ID                                       |
-| `eventType`     | `SystemAuditEventType`     | ✅       | Event category (see enum below)                                            |
-| `service`       | `PlatformService`          | ✅       | Which API service triggered the event                                      |
-| `orgId`         | `string \| null`           | ✅       | Organization involved; `null` for unauthenticated/platform-level events    |
-| `actorId`       | `string \| null`           | ✅       | Firebase Auth UID if available; `null` for API-key-only requests           |
-| `actorApiKeyId` | `string \| null`           | ✅       | ID of the API key used for the request; `null` for session-authenticated   |
-| `actorEmail`    | `string \| null`           | ✅       | Denormalized email; `null` for anonymous/API-key-only actors               |
-| `action`        | `string`                   | ✅       | Human-readable description (e.g., "API key authenticated for Store service")|
-| `resource`      | `string \| null`           | ✅       | Resource path or identifier (e.g., store ID, memory ID)                    |
-| `outcome`       | `"success" \| "failure"`   | ✅       | Result of the operation                                                    |
-| `errorCode`     | `string \| null`           | ✅       | Error code (e.g., `RATE_LIMIT_EXCEEDED`, `API_KEY_INVALID`); null if success|
-| `errorMessage`  | `string \| null`           | ✅       | Human-readable error; null if success                                      |
-| `requestId`     | `string \| null`           | ✅       | Unique request/trace ID for correlation across logs                        |
-| `ipAddress`     | `string \| null`           | ✅       | Caller IP address                                                          |
-| `userAgent`     | `string \| null`           | ✅       | Caller user agent                                                          |
-| `timestamp`     | `Timestamp`                | ✅       | Server-set; used for chronological ordering                                |
+| Field           | Type                     | Required | Notes                                                                        |
+| --------------- | ------------------------ | -------- | ---------------------------------------------------------------------------- |
+| `id`            | `string`                 | ✅       | Firestore auto-generated document ID                                         |
+| `eventType`     | `SystemAuditEventType`   | ✅       | Event category (see enum below)                                              |
+| `service`       | `PlatformService`        | ✅       | Which API service triggered the event                                        |
+| `orgId`         | `string \| null`         | ✅       | Organization involved; `null` for unauthenticated/platform-level events      |
+| `actorId`       | `string \| null`         | ✅       | Firebase Auth UID if available; `null` for API-key-only requests             |
+| `actorApiKeyId` | `string \| null`         | ✅       | ID of the API key used for the request; `null` for session-authenticated     |
+| `actorEmail`    | `string \| null`         | ✅       | Denormalized email; `null` for anonymous/API-key-only actors                 |
+| `action`        | `string`                 | ✅       | Human-readable description (e.g., "API key authenticated for Store service") |
+| `resource`      | `string \| null`         | ✅       | Resource path or identifier (e.g., store ID, memory ID)                      |
+| `outcome`       | `"success" \| "failure"` | ✅       | Result of the operation                                                      |
+| `errorCode`     | `string \| null`         | ✅       | Error code (e.g., `RATE_LIMIT_EXCEEDED`, `API_KEY_INVALID`); null if success |
+| `errorMessage`  | `string \| null`         | ✅       | Human-readable error; null if success                                        |
+| `requestId`     | `string \| null`         | ✅       | Unique request/trace ID for correlation across logs                          |
+| `ipAddress`     | `string \| null`         | ✅       | Caller IP address                                                            |
+| `userAgent`     | `string \| null`         | ✅       | Caller user agent                                                            |
+| `timestamp`     | `Timestamp`              | ✅       | Server-set; used for chronological ordering                                  |
 
 **Enum: SystemAuditEventType**:
+
 ```typescript
 type SystemAuditEventType =
-  // User Auth (orgId = null — happen before org context is known)
-  | "SESSION_LOGIN"             // user signed in (magic link, OAuth, etc.)
-  | "SESSION_LOGOUT"            // user signed out
-  | "SESSION_EXPIRED"           // session token expired
-  | "SESSION_REVOKED"           // session forcibly revoked (e.g., on org removal)
-  | "PASSWORD_RESET_REQUESTED"  // user requested password/magic link reset
-  | "AUTH_FAILURE"              // failed login attempt (wrong token, unverified, etc.)
-  | "MFA_CHALLENGE_SENT"        // MFA code sent (if MFA enabled)
-  | "MFA_CHALLENGE_FAILED"      // MFA code incorrect or expired
-  // API Key (orgId = null on creation; set on auth events)
-  | "API_KEY_AUTH_SUCCESS"      // valid API key used to call a service
-  | "API_KEY_AUTH_FAILURE"      // invalid/revoked API key rejected (orgId may be null if key unknown)
-  | "API_KEY_RATE_LIMITED"      // API key exceeded rate limit
-  | "API_KEY_CREATED"           // new API key issued to org
-  | "API_KEY_REVOKED"           // API key manually revoked by org admin
-  | "API_KEY_ROTATED"           // API key rotated (old revoked, new issued)
-  // Organization Lifecycle
-  | "ORG_CREATED"               // new organization signed up
-  | "ORG_DELETED"               // organization deleted (triggers cascade)
-  | "ORG_UPDATED"               // org name/settings changed
-  // Service-Level (cross-service visibility; orgId always set)
-  | "MEMORY_CREATED"            // memory resource created
-  | "STORE_CREATED"             // store resource created
-  | "STORE_DELETED"             // store resource deleted
-  | "CONTEXT_CREATED"           // context resource created
-  | "CONTEXT_DELETED"           // context resource deleted
-  // Platform Health
-  | "SCHEDULED_JOB_RUN"         // background Cloud Function scheduled run completed
-  | "SCHEDULED_JOB_FAILED";     // scheduled job failed after all retries
+  // @v1: User Auth (orgId = null — happen before org context is known)
+  | "SESSION_LOGIN" // user signed in (magic link, OAuth, etc.)
+  | "SESSION_LOGOUT" // user signed out
+  | "SESSION_REVOKED" // session forcibly revoked (e.g., on org removal)
+  | "AUTH_FAILURE" // failed login attempt (wrong token, unverified, etc.)
+  // @v1+: API Key (orgId = null on creation; set on auth events)
+  | "API_KEY_AUTH_SUCCESS" // valid API key used to call a service
+  | "API_KEY_AUTH_FAILURE" // invalid/revoked API key rejected (orgId may be null if key unknown)
+  | "API_KEY_RATE_LIMITED" // API key exceeded rate limit
+  | "API_KEY_CREATED" // new API key issued to org
+  | "API_KEY_REVOKED" // API key manually revoked by org admin
+  // @v1+: Organization Lifecycle
+  | "ORG_CREATED" // new organization signed up
+  | "ORG_DELETED" // organization deleted (triggers cascade)
+  // @v2: Advanced (defer)
+  | "SESSION_EXPIRED" // session token expired (v2)
+  | "PASSWORD_RESET_REQUESTED" // user requested password reset (v2)
+  | "MFA_CHALLENGE_SENT"
+  | "MFA_CHALLENGE_FAILED" // MFA events (v2)
+  | "API_KEY_ROTATED" // API key rotated (v2)
+  | "ORG_UPDATED" // org settings changed (v2)
+  | "MEMORY_CREATED"
+  | "STORE_CREATED"
+  | "STORE_DELETED"
+  | "CONTEXT_CREATED"
+  | "CONTEXT_DELETED" // service-level (v2)
+  | "SCHEDULED_JOB_RUN"
+  | "SCHEDULED_JOB_FAILED"; // platform health (v2)
 ```
 
 **Enum: PlatformService**:
+
 ```typescript
 type PlatformService =
-  | "auth"      // Authentication service
-  | "memory"    // Memory service
-  | "store"     // Store service
-  | "context"   // Context service
+  | "auth" // Authentication service
+  | "memory" // Memory service
+  | "store" // Store service
+  | "context" // Context service
   | "dashboard" // Dashboard/UI layer
-  | "system";   // Internal platform/Cloud Functions
+  | "system"; // Internal platform/Cloud Functions
 ```
 
 **Indexes**:
+
 - `(timestamp DESC)` — chronological system-wide log
 - `(orgId ASC, timestamp DESC)` — all system events for a specific org
 - `(eventType ASC, timestamp DESC)` — filter by event type across all orgs
@@ -300,6 +321,7 @@ type PlatformService =
 - `(orgId ASC, eventType ASC, timestamp DESC)` — org + event type compound filter
 
 **Notes**:
+
 - Written exclusively by Cloud Functions API middleware on every inbound API request and significant lifecycle event.
 - Never readable by org admins or members — only platform super-admins via internal tooling.
 - Immutable; never deleted. Archive to BigQuery or cold storage for long-term analytics.
@@ -311,57 +333,61 @@ type PlatformService =
 
 Subcollection on each organization. Append-only immutable audit trail for events within a specific organization (user management, role changes, membership events). Readable by org admins.
 
-| Field           | Type                                          | Required | Notes                                               |
-| --------------- | --------------------------------------------- | -------- | --------------------------------------------------- |
-| `id`            | `string`                                      | ✅       | Firestore auto-generated document ID                |
-| `orgId`         | `string`                                      | ✅       | Parent organization                                 |
-| `eventType`     | `OrgAuditEventType` (enum)                    | ✅       | Event category (see enum below)                     |
-| `actorId`       | `string`                                      | ✅       | Firebase Auth UID of admin who performed action     |
-| `actorEmail`    | `string`                                      | ✅       | Email of actor (denormalized for query convenience) |
-| `affectedUserId` | `string \| null`                             | ✅       | Firebase Auth UID of affected user; null for non-user events |
-| `affectedEmail` | `string \| null`                              | ✅       | Email of affected user; null if not applicable      |
-| `action`        | `string`                                      | ✅       | Human-readable description (e.g., "Removed user from org") |
-| `resource`      | `string \| null`                              | ✅       | Resource affected (e.g., `"USER_MEMBERSHIP"`, `"API_KEY"`) |
-| `oldValues`     | `Record<string, unknown> \| null`             | ✅       | Previous values (for updates; null for creates/deletes) |
-| `newValues`     | `Record<string, unknown> \| null`             | ✅       | New values (for creates/updates; null for deletes)  |
-| `outcome`       | `"success" \| "failure"`                      | ✅       | Result of the operation                             |
-| `errorMessage`  | `string \| null`                              | ✅       | Error details if outcome is failure; null otherwise |
-| `timestamp`     | `Timestamp`                                   | ✅       | Server-set; used for log chronological ordering     |
-| `ipAddress`     | `string \| null`                              | ✅       | Optional actor IP for security investigation        |
-| `userAgent`     | `string \| null`                              | ✅       | Optional browser/client user agent string           |
+| Field            | Type                              | Required | Notes                                                        |
+| ---------------- | --------------------------------- | -------- | ------------------------------------------------------------ |
+| `id`             | `string`                          | ✅       | Firestore auto-generated document ID                         |
+| `orgId`          | `string`                          | ✅       | Parent organization                                          |
+| `eventType`      | `OrgAuditEventType` (enum)        | ✅       | Event category (see enum below)                              |
+| `actorId`        | `string`                          | ✅       | Firebase Auth UID of admin who performed action              |
+| `actorEmail`     | `string`                          | ✅       | Email of actor (denormalized for query convenience)          |
+| `affectedUserId` | `string \| null`                  | ✅       | Firebase Auth UID of affected user; null for non-user events |
+| `affectedEmail`  | `string \| null`                  | ✅       | Email of affected user; null if not applicable               |
+| `action`         | `string`                          | ✅       | Human-readable description (e.g., "Removed user from org")   |
+| `resource`       | `string \| null`                  | ✅       | Resource affected (e.g., `"USER_MEMBERSHIP"`, `"API_KEY"`)   |
+| `oldValues`      | `Record<string, unknown> \| null` | ✅       | Previous values (for updates; null for creates/deletes)      |
+| `newValues`      | `Record<string, unknown> \| null` | ✅       | New values (for creates/updates; null for deletes)           |
+| `outcome`        | `"success" \| "failure"`          | ✅       | Result of the operation                                      |
+| `errorMessage`   | `string \| null`                  | ✅       | Error details if outcome is failure; null otherwise          |
+| `timestamp`      | `Timestamp`                       | ✅       | Server-set; used for log chronological ordering              |
+| `ipAddress`      | `string \| null`                  | ✅       | Optional actor IP for security investigation                 |
+| `userAgent`      | `string \| null`                  | ✅       | Optional browser/client user agent string                    |
 
 **Enum: OrgAuditEventType**:
+
 ```typescript
 type OrgAuditEventType =
-  // Membership
-  | "USER_INVITED"              // user invited to org
-  | "USER_JOINED"               // user joined org (via link/code)
-  | "USER_ADDED"                // admin added user directly
-  | "USER_REMOVED"              // admin removed user from org
-  | "BASE_ROLE_CHANGED"         // user's base role changed (owner/admin/member)
-  | "MEMBERSHIP_RESTORED"       // user restored during recovery window
+  // @v1: Membership
+  | "USER_REMOVED" // admin removed user from org
+  | "BASE_ROLE_CHANGED" // user's base role changed (admin ← → member)
+  | "MEMBERSHIP_RESTORED" // user restored during recovery window
   | "API_KEY_REVOKED_ON_REMOVAL" // API key revoked due to user removal
-  // RBAC
-  | "ROLE_CREATED"              // custom role created
-  | "ROLE_UPDATED"              // custom role permissions changed
-  | "ROLE_DELETED"              // custom role deleted
-  | "ROLE_ASSIGNED"             // custom role assigned to a member
-  | "ROLE_UNASSIGNED"           // custom role removed from a member
-  // ABAC
-  | "POLICY_CREATED"            // ABAC policy created
-  | "POLICY_UPDATED"            // ABAC policy updated
-  | "POLICY_DELETED"            // ABAC policy deleted
-  | "POLICY_ENABLED"            // ABAC policy activated
-  | "POLICY_DISABLED";          // ABAC policy deactivated
+  // @v2: Membership additions (defer)
+  | "USER_INVITED"
+  | "USER_JOINED"
+  | "USER_ADDED" // user join variants (v2)
+  // @v2: RBAC (defer)
+  | "ROLE_CREATED"
+  | "ROLE_UPDATED"
+  | "ROLE_DELETED"
+  | "ROLE_ASSIGNED"
+  | "ROLE_UNASSIGNED" // custom roles (v2)
+  // @v2: ABAC (defer)
+  | "POLICY_CREATED"
+  | "POLICY_UPDATED"
+  | "POLICY_DELETED"
+  | "POLICY_ENABLED"
+  | "POLICY_DISABLED"; // policies (v2)
 ```
 
 **Indexes**:
+
 - `(orgId ASC, timestamp DESC)` — for chronological audit log listing
 - `(orgId ASC, eventType ASC, timestamp DESC)` — for filtering by event type
 - `(orgId ASC, affectedUserId ASC, timestamp DESC)` — for querying all events affecting a specific user
 - `(orgId ASC, actorId ASC, timestamp DESC)` — for querying all actions by a specific actor
 
 **Notes**:
+
 - Audit log entries are immutable and must never be deleted. Archive to cold storage after 1+ years if needed.
 - `oldValues` and `newValues` store snapshots of affected attributes (e.g., `{ role: "member" }` and `{ role: "admin" }` for promotions).
 - `ipAddress` and `userAgent` are optional context fields useful for security investigation but not required for v1.
@@ -373,15 +399,15 @@ type OrgAuditEventType =
 
 Existing collection. Modified to support multi-organization functionality.
 
-| Field                   | Type                | Required | Notes                                                        |
-| ----------------------- | ------------------- | -------- | ------------------------------------------------------------ |
-| `id`                    | `string`            | ✅       | Firebase Auth UID (same as document ID)                      |
-| `email`                 | `string`            | ✅       | From Firebase Auth                                           |
-| `displayName`           | `string`            | ✅       | Editable on profile                                          |
-| `orgId`                 | `string`            | ✅       | **Primary** organization ID; used for dashboard on login     |
-| `onboardingCompletedAt` | `Timestamp \| null` | ✅       | `null` until onboarding modal submitted                      |
-| `createdAt`             | `Timestamp`         | ✅       | Server-set                                                   |
-| `updatedAt`             | `Timestamp`         | ✅       | Server-set on every write                                    |
+| Field                   | Type                | Required | Notes                                                    |
+| ----------------------- | ------------------- | -------- | -------------------------------------------------------- |
+| `id`                    | `string`            | ✅       | Firebase Auth UID (same as document ID)                  |
+| `email`                 | `string`            | ✅       | From Firebase Auth                                       |
+| `displayName`           | `string`            | ✅       | Editable on profile                                      |
+| `orgId`                 | `string`            | ✅       | **Primary** organization ID; used for dashboard on login |
+| `onboardingCompletedAt` | `Timestamp \| null` | ✅       | `null` until onboarding modal submitted                  |
+| `createdAt`             | `Timestamp`         | ✅       | Server-set                                               |
+| `updatedAt`             | `Timestamp`         | ✅       | Server-set on every write                                |
 
 **Change from 001**: `orgId` is now the **primary** org only (for initial dashboard landing). Additional org memberships are tracked in `organizations/{orgId}/memberships/{userId}`.
 
@@ -391,20 +417,21 @@ Existing collection. Modified to support multi-organization functionality.
 
 Existing collection. Modified to track membership count and admin count.
 
-| Field          | Type             | Required | Notes                                                  |
-| -------------- | ---------------- | -------- | ------------------------------------------------------ |
-| `id`           | `string`         | ✅       | Firestore auto-generated document ID                   |
-| `name`         | `string`         | ✅       | Editable from Settings                                 |
-| `size`         | `OrgSize` (enum) | ✅       | Organization size for analytics                        |
-| `ownerUid`     | `string`         | ✅       | Firebase Auth UID of original creator                  |
-| `memberCount`  | `number`         | ✅       | Denormalized count of active (non-deleted) members     |
-| `adminCount`   | `number`         | ✅       | Denormalized count of active admins (for removal validation) |
-| `gracePeriodDays` | `number`      | ✅       | Configurable grace period for hard deletion (default: 30) |
-| `notificationsEnabled` | `boolean` | ✅    | Whether to send offboarding/role change notifications  |
-| `createdAt`    | `Timestamp`      | ✅       | Server-set                                              |
-| `updatedAt`    | `Timestamp`      | ✅       | Server-set on every write                              |
+| Field                  | Type             | Required | Notes                                                        |
+| ---------------------- | ---------------- | -------- | ------------------------------------------------------------ |
+| `id`                   | `string`         | ✅       | Firestore auto-generated document ID                         |
+| `name`                 | `string`         | ✅       | Editable from Settings                                       |
+| `size`                 | `OrgSize` (enum) | ✅       | Organization size for analytics                              |
+| `ownerUid`             | `string`         | ✅       | Firebase Auth UID of original creator                        |
+| `memberCount`          | `number`         | ✅       | Denormalized count of active (non-deleted) members           |
+| `adminCount`           | `number`         | ✅       | Denormalized count of active admins (for removal validation) |
+| `gracePeriodDays`      | `number`         | ✅       | Configurable grace period for hard deletion (default: 30)    |
+| `notificationsEnabled` | `boolean`        | ✅       | Whether to send offboarding/role change notifications        |
+| `createdAt`            | `Timestamp`      | ✅       | Server-set                                                   |
+| `updatedAt`            | `Timestamp`      | ✅       | Server-set on every write                                    |
 
 **Notes**:
+
 - `memberCount` and `adminCount` are denormalized for efficient KPI queries. They are updated on every membership change (add, remove, role change, restore).
 - `gracePeriodDays` is set per-org via organization settings (configurable 1-365 days; default: 30). This setting applies to ALL user removals in that org. Individual removals cannot override this setting. The value is captured as a snapshot in each deletion task for auditability.
 - These are new fields added to the existing `organizations` collection from `001-auth-onboarding-platform`.
@@ -416,14 +443,14 @@ Existing collection. Modified to track membership count and admin count.
 ### `OrgMembership` (`src/data/organizations/models/org-membership.model.ts`)
 
 ```typescript
-export type BaseRole = "owner" | "admin" | "member";
+export type BaseRole = "owner" | "admin" | "member"; // @v1
 
 export interface OrgMembership {
   id: string; // userId (same as Firestore document ID)
   orgId: string;
   userId: string;
-  baseRole: BaseRole;
-  roleIds: string[]; // custom role IDs from organizations/{orgId}/roles/
+  baseRole: BaseRole; // @v1: owner, admin, or member; immutable in v1
+  roleIds: string[]; // @v2: custom role IDs (always empty in v1)
   joinedAt: Date;
   lastActiveAt: Date | null;
   deletedAt: Date | null; // null if active; set when removed
@@ -442,11 +469,11 @@ export interface OrgMembershipWithProfile extends OrgMembership {
 ### `DeletionTask` (`src/data/organizations/models/deletion-task.model.ts`)
 
 ```typescript
-export type TaskStatus = 
-  | "pending" 
-  | "in_progress" 
-  | "completed" 
-  | "failed" 
+export type TaskStatus =
+  | "pending"
+  | "in_progress"
+  | "completed"
+  | "failed"
   | "cancelled";
 
 export interface DeletionTask {
@@ -512,7 +539,12 @@ export type SystemAuditEventType =
   | "SCHEDULED_JOB_FAILED";
 
 export type PlatformService =
-  | "auth" | "memory" | "store" | "context" | "dashboard" | "system";
+  | "auth"
+  | "memory"
+  | "store"
+  | "context"
+  | "dashboard"
+  | "system";
 
 export interface SystemAuditEntry {
   id: string;
@@ -766,6 +798,7 @@ To support efficient queries and UI rendering, the following fields are denormal
 8. **Active policy cache in middleware**: All `isActive = true` policies for an org are loaded once per org per request (60 s TTL) to avoid per-permission Firestore reads.
 
 **Denormalization Maintenance**:
+
 - Updates to denormalized fields happen transactionally or via Cloud Functions to ensure consistency.
 - Example: When a user is promoted to admin, both `organizations/{orgId}/memberships/{userId}.role` and `organizations/{orgId}.adminCount` are updated atomically in a transaction.
 
@@ -785,7 +818,7 @@ The existing `organizations/{orgId}` and `profiles/{userId}` collections are ext
 8. **Add new subcollection**: Create `organizations/{orgId}/audits/` for org-scoped events.
 9. **Backfill memberships**: Migrate existing memberships; set `baseRole` from previous `role` field; set `roleIds: []`.
 10. **Update organization schema**: Add `memberCount`, `adminCount`, `gracePeriodDays`, `notificationsEnabled` fields.
-7. **Firestore security rules**: Update to include new collections and subcollections (see pseudocode above).
+11. **Firestore security rules**: Update to include new collections and subcollections (see pseudocode above).
 
 ---
 
@@ -827,6 +860,7 @@ The existing `organizations/{orgId}` and `profiles/{userId}` collections are ext
 ## Storage Paths
 
 **Cloud Storage (for removal cleanup)**:
+
 - User-uploaded files: `orgs/{orgId}/stores/{storeId}/documents/{docId}/{filename}`
 - All files under `orgs/{orgId}/` owned by removed users are deleted via `buckets/list()` + `delete()` operations in the deletion task handler.
 

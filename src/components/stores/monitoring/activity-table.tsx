@@ -354,7 +354,7 @@ export function ActivityTable({
 
                                         {buildPages(pageNum, totalPages).map((item, idx) =>
                                             item === "ellipsis" ? (
-                                                // eslint-disable-next-line react/no-array-index-key
+                                                 
                                                 <Pagination.Item key={`ellipsis-${idx}`}>
                                                     <PaginationEllipsis />
                                                 </Pagination.Item>

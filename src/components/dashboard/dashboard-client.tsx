@@ -7,7 +7,9 @@ import { ErrorActivityChart } from '@/components/dashboard/error-activity-chart'
 interface Metrics {
     totalActiveKeys: number
     totalStores: number
-    totalMemories: number
+    totalFiles: number
+    totalContexts: number
+    totalMembers: number
     keyActivity: { date: string; count: number }[]
     errors: { date: string; count: number }[]
 }
@@ -24,10 +26,12 @@ export function DashboardClient({ displayName, metrics }: Readonly<DashboardClie
                 Welcome back, {displayName || 'there'} 👋
             </h1>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
                 <KpiTile label="Active API keys" value={metrics.totalActiveKeys} />
                 <KpiTile label="Total stores" value={metrics.totalStores} />
-                <KpiTile label="Total memories" value={metrics.totalMemories} />
+                <KpiTile label="Total files" value={metrics.totalFiles} />
+                <KpiTile label="Total contexts" value={metrics.totalContexts} />
+                <KpiTile label="Total members" value={metrics.totalMembers} />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

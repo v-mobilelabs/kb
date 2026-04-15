@@ -6,7 +6,14 @@ import {
   validateRequestParams,
   sendErrorResponse,
 } from "../lib/request-validator.js";
-import { createStore, updateStore, deleteStore, getStoreDocuments, createStoreDocument, updateStoreDocument } from "../../data/store.js";
+import {
+  createStore,
+  updateStore,
+  deleteStore,
+  getStoreDocuments,
+  createStoreDocument,
+  updateStoreDocument,
+} from "../../data/store.js";
 import type { AuthenticatedRequest } from "../middleware/validate-api-key.js";
 import { logApiKeyUsageFailure } from "../../lib/audit-logger.js";
 
@@ -176,7 +183,11 @@ router.put(
   async (req: Request, res: Response): Promise<void> => {
     const { orgId, apiKeyId } = req as AuthenticatedRequest;
 
-    const params = await validateRequestParams(StoreDocumentParamSchema, req, res);
+    const params = await validateRequestParams(
+      StoreDocumentParamSchema,
+      req,
+      res,
+    );
     if (!params) return;
 
     const body = await validateRequestBody(UpdateStoreDocumentSchema, req, res);
