@@ -42,7 +42,7 @@ export class CompleteOnboardingUseCase extends BaseUseCase<
     const orgRef = adminDb.collection("organizations").doc();
     const orgId = orgRef.id;
 
-    // Batch write: create profile + create org atomically
+    // Batch write: create profile + create org + add user as owner member atomically
     const batch = adminDb.batch();
 
     const profileData = {
@@ -66,6 +66,25 @@ export class CompleteOnboardingUseCase extends BaseUseCase<
       updatedAt: now,
     };
     batch.set(orgRef, { ...orgData, id: orgId });
+
+    // Add current user as organization member with owner role
+    const membershipData = {
+      id: uid,
+      orgId,
+      userId: uid,
+      email,
+      baseRole: "owner",
+      roleIds: [],
+      joinedAt: now,
+      lastActiveAt: null,
+      deletedAt: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+    batch.set(
+      adminDb.collection(`organizations/${orgId}/memberships`).doc(uid),
+      membershipData,
+    );
 
     await batch.commit().catch((cause: unknown) => {
       throw appError("INTERNAL_ERROR", "Failed to save onboarding data", cause);
